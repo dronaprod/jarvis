@@ -28,6 +28,30 @@ import time
 import argparse
 import json
 import re
+from pathlib import Path
+
+def get_config_path():
+    """Get the path to the config file"""
+    config_dir = Path.home() / ".jarvis"
+    config_dir.mkdir(exist_ok=True)
+    return config_dir / "config.json"
+
+def load_config():
+    """Load configuration from file"""
+    config_file = get_config_path()
+    if config_file.exists():
+        try:
+            with open(config_file, 'r') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_config(config):
+    """Save configuration to file"""
+    config_file = get_config_path()
+    with open(config_file, 'w') as f:
+        json.dump(config, f, indent=2)
 
 class Jarvis:
     def __init__(self, model='gemini'):
@@ -49,7 +73,9 @@ class Jarvis:
     def setup_slm(self):
         """Setup SLM connection"""
         try:
-            self.slm_url = "http://35.174.147.167:5000"
+            # Get SLM URL from config file, default to hardcoded URL
+            config = load_config()
+            self.slm_url = config.get('slm_url', 'http://35.174.147.167:5000')
             
             # Test the connection
             test_response = self.query_slm("Hello")
@@ -63,14 +89,29 @@ class Jarvis:
             print(f"❌ SLM connection failed: {e}")
             print("❌ Jarvis requires AI connection to work")
             print("❌ Please check your internet connection to SLM server")
+            print("💡 Configure SLM server URL using:")
+            print("   jarvis configure -m slm --url <server-url>")
             sys.exit(1)
     
     def setup_gemini(self):
         """Setup Gemini connection"""
         try:
             import google.generativeai as genai
-            genai.configure(api_key="AIzaSyAfvx7x3MzQGp3yB_zkrbVpA1QMn3xomLE")
-            self.ai_model = genai.GenerativeModel('gemini-2.5-flash')
+            
+            # Get API key and model name from config file
+            config = load_config()
+            api_key = config.get('gemini_api_key')
+            model_name = config.get('gemini_model_name', 'gemini-2.5-flash')  # Default to gemini-2.5-flash
+            
+            if not api_key:
+                print("❌ Gemini API key not configured")
+                print("❌ Please configure it using:")
+                print("   jarvis configure -m gemini --api-key <your-api-key> [-n <model-name>]")
+                print("💡 Get your API key from: https://makersuite.google.com/app/apikey")
+                sys.exit(1)
+            
+            genai.configure(api_key=api_key)
+            self.ai_model = genai.GenerativeModel(model_name)
             
             # Test the connection
             test_response = self.ai_model.generate_content("Hello")
@@ -84,6 +125,9 @@ class Jarvis:
             print(f"❌ Gemini connection failed: {e}")
             print("❌ Jarvis requires AI connection to work")
             print("❌ Please check your internet connection and API key")
+            if "403" in str(e) or "API key" in str(e):
+                print("💡 Your API key may be invalid. Configure a new one:")
+                print("   jarvis configure -model gemini <your-api-key>")
             sys.exit(1)
     
     def query_slm(self, prompt):
@@ -147,6 +191,13 @@ class Jarvis:
         print("  jarvis 'command' -m gemini  - Use Gemini model (default)")
         print("  jarvis -m slm               - Start interactive mode with SLM")
         print("  jarvis -m gemini            - Start interactive mode with Gemini")
+        print()
+        print("🔑 Configuration:")
+        print("  Gemini: jarvis configure -m gemini --api-key <api-key> [-n <model-name>]")
+        print("    Example: jarvis configure -m gemini -n 'gemini-2.5-flash' --api-key 'your-key'")
+        print("    Get API key from: https://makersuite.google.com/app/apikey")
+        print("  SLM: jarvis configure -m slm --url <server-url>")
+        print("    Example: jarvis configure -m slm --url http://35.174.147.167:5000")
         print()
         print("💡 Example Questions:")
         print("  🔍 Analysis (Multi-turn):")
@@ -787,7 +838,60 @@ Respond with JSON for commands or plain text for information."""
                 print(f"❌ Error: {e}")
                 print()
 
+def configure_api_key(model, api_key=None, model_name=None, slm_url=None):
+    """Configure settings for a model"""
+    config = load_config()
+    
+    if model == 'gemini':
+        if not api_key:
+            print("❌ API key is required for Gemini model")
+            print("❌ Usage: jarvis configure -m gemini --api-key <your-api-key> [-n <model-name>]")
+            sys.exit(1)
+        config['gemini_api_key'] = api_key
+        if model_name:
+            config['gemini_model_name'] = model_name
+        else:
+            # Default model name if not specified
+            config['gemini_model_name'] = 'gemini-2.5-flash'
+        save_config(config)
+        print(f"✅ Gemini API key configured successfully")
+        if model_name:
+            print(f"✅ Model name set to: {model_name}")
+        print("💡 You can now use jarvis with: jarvis 'your question'")
+    elif model == 'slm':
+        if not slm_url:
+            print("❌ Server URL is required for SLM model")
+            print("❌ Usage: jarvis configure -m slm --url <server-url>")
+            print("❌ Example: jarvis configure -m slm --url http://35.174.147.167:5000")
+            sys.exit(1)
+        config['slm_url'] = slm_url
+        save_config(config)
+        print(f"✅ SLM server URL configured successfully")
+        print(f"✅ Server URL set to: {slm_url}")
+        print("💡 You can now use jarvis with: jarvis 'your question' -m slm")
+    else:
+        print(f"❌ Unknown model: {model}")
+        print("❌ Supported models: 'gemini', 'slm'")
+        sys.exit(1)
+
 def main():
+    # Check if first argument is 'configure'
+    if len(sys.argv) > 1 and sys.argv[1] == 'configure':
+        parser = argparse.ArgumentParser(description='Jarvis - Configure Model Settings')
+        parser.add_argument('configure', help='configure command')
+        parser.add_argument('-m', '--model', choices=['slm', 'gemini'], required=True,
+                          help='AI model to configure')
+        parser.add_argument('-n', '--name', dest='model_name',
+                          help='Model name for Gemini (e.g., gemini-2.5-flash, gemini-pro)')
+        parser.add_argument('--api-key', dest='api_key',
+                          help='API key for Gemini model')
+        parser.add_argument('--url', dest='slm_url',
+                          help='Server URL for SLM model (e.g., http://35.174.147.167:5000)')
+        args = parser.parse_args()
+        configure_api_key(args.model, args.api_key, args.model_name, args.slm_url)
+        return
+    
+    # Regular jarvis usage
     parser = argparse.ArgumentParser(description='Jarvis - Global Terminal AI Copilot')
     parser.add_argument('query', nargs='*', help='Query to ask Jarvis')
     parser.add_argument('-m', '--model', choices=['slm', 'gemini'], default='gemini', 
