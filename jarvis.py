@@ -2,7 +2,7 @@
 """
 Jarvis - Global Terminal AI Copilot
 Run from anywhere by typing 'jarvis' in any terminal
-Supports multiple AI models: SLM and Gemini
+Supports multiple AI models: SLM, Gemini, and Drona
 """
 
 import os
@@ -28,6 +28,8 @@ import time
 import argparse
 import json
 import re
+import socket
+import base64
 from pathlib import Path
 
 def get_config_path():
@@ -54,10 +56,46 @@ def save_config(config):
         json.dump(config, f, indent=2)
 
 class Jarvis:
-    def __init__(self, model='gemini'):
+    def __init__(self, model='gemini', bot_id=None, image_path=None):
         self.running = True
         self.model = model
+        self.bot_id = bot_id
+        self.image_path = image_path
+        self.image_data = None
+        self.image_mime_type = None
+        if image_path:
+            self.load_image(image_path)
         self.setup_ai()
+    
+    def load_image(self, image_path):
+        """Load and encode image file to base64"""
+        try:
+            image_file = Path(image_path)
+            if not image_file.exists():
+                print(f"⚠️ Warning: Image file not found: {image_path}")
+                return
+            
+            # Read image file and encode to base64
+            with open(image_file, 'rb') as f:
+                image_bytes = f.read()
+                self.image_data = base64.b64encode(image_bytes).decode('utf-8')
+            
+            # Detect MIME type based on file extension
+            ext = image_file.suffix.lower()
+            mime_types = {
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.webp': 'image/webp',
+                '.bmp': 'image/bmp'
+            }
+            self.image_mime_type = mime_types.get(ext, 'image/jpeg')
+            
+            print(f"✅ Image loaded: {image_path}")
+        except Exception as e:
+            print(f"⚠️ Warning: Failed to load image: {e}")
+            self.image_data = None
         
     def setup_ai(self):
         """Setup AI connection - REQUIRED"""
@@ -65,9 +103,11 @@ class Jarvis:
             self.setup_slm()
         elif self.model == 'gemini':
             self.setup_gemini()
+        elif self.model == 'drona':
+            self.setup_drona()
         else:
             print(f"❌ Unknown model: {self.model}")
-            print("❌ Supported models: 'slm', 'gemini'")
+            print("❌ Supported models: 'slm', 'gemini', 'drona'")
             sys.exit(1)
     
     def setup_slm(self):
@@ -130,6 +170,38 @@ class Jarvis:
                 print("   jarvis configure -model gemini <your-api-key>")
             sys.exit(1)
     
+    def setup_drona(self):
+        """Setup Drona connection"""
+        try:
+            # Get Drona API URL and bot_id from config file or use provided values
+            config = load_config()
+            self.drona_url = config.get('drona_url', 'https://api.vtorlabs.com/drona/v1/jarvis/chat')
+            # Use provided bot_id or fall back to config
+            if not self.bot_id:
+                self.bot_id = config.get('drona_bot_id')
+            
+            if not self.bot_id:
+                print("❌ Bot ID is required for Drona mode")
+                print("❌ Please provide it using:")
+                print("   jarvis 'your message' -m drona -b <bot_id>")
+                print("   Or configure it: jarvis configure -m drona -b <bot_id>")
+                sys.exit(1)
+            
+            # Skip test connection - just mark as available
+            # The actual query will test the connection naturally
+            self.ai_available = True
+            print("✅ Drona AI ready")
+                
+        except Exception as e:
+            print(f"❌ Drona connection failed: {e}")
+            print("❌ Jarvis requires AI connection to work")
+            print("❌ Please check your internet connection to Drona server")
+            print(f"💡 URL being used: {self.drona_url}")
+            print(f"💡 Bot ID being used: {self.bot_id}")
+            print("💡 Configure Drona server URL using:")
+            print("   jarvis configure -m drona --url <server-url>")
+            sys.exit(1)
+    
     def query_slm(self, prompt):
         """Query SLM server"""
         try:
@@ -149,6 +221,140 @@ class Jarvis:
             return None
         except Exception as e:
             print(f"❌ SLM query failed: {e}")
+            return None
+    
+    def get_ip_address(self):
+        """Get the machine's IP address"""
+        try:
+            # Try to get local IP address
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                # Connect to a remote address (doesn't actually send data)
+                s.connect(('8.8.8.8', 80))
+                ip = s.getsockname()[0]
+            except Exception:
+                ip = '127.0.0.1'
+            finally:
+                s.close()
+            return ip
+        except Exception as e:
+            return '127.0.0.1'
+    
+    def get_machine_details(self):
+        """Get machine details as a dictionary"""
+        try:
+            import psutil
+            
+            # Get CPU information
+            cpu_percent = psutil.cpu_percent(interval=1)
+            cpu_count = psutil.cpu_count()
+            cpu_freq = psutil.cpu_freq()
+            
+            # Get memory information
+            memory = psutil.virtual_memory()
+            memory_percent = memory.percent
+            memory_available = memory.available // (1024**3)
+            memory_total = memory.total // (1024**3)
+            
+            # Get disk information
+            disk = psutil.disk_usage('/')
+            disk_percent = disk.percent
+            disk_free = disk.free // (1024**3)
+            disk_total = disk.total // (1024**3)
+            
+            # Get load average
+            load_avg = os.getloadavg()
+            
+            # Get running processes count
+            process_count = len(psutil.pids())
+            
+            return {
+                "system": platform.system(),
+                "release": platform.release(),
+                "machine": platform.machine(),
+                "hostname": platform.node(),
+                "cpu_percent": cpu_percent,
+                "cpu_count": cpu_count,
+                "cpu_freq": cpu_freq.current if cpu_freq else "Unknown",
+                "memory_percent": memory_percent,
+                "memory_available": memory_available,
+                "memory_total": memory_total,
+                "disk_percent": disk_percent,
+                "disk_free": disk_free,
+                "disk_total": disk_total,
+                "load_avg_1min": load_avg[0],
+                "load_avg_5min": load_avg[1],
+                "load_avg_15min": load_avg[2],
+                "process_count": process_count,
+                "current_dir": os.getcwd(),
+                "ip_address": self.get_ip_address()
+            }
+        except Exception as e:
+            return {
+                "system": platform.system(),
+                "release": platform.release(),
+                "machine": platform.machine(),
+                "hostname": platform.node(),
+                "current_dir": os.getcwd(),
+                "ip_address": self.get_ip_address(),
+                "error": str(e)
+            }
+    
+    def query_drona(self, message, test=False):
+        """Query Drona server with message, machine details, IP address, and optionally image"""
+        try:
+            import requests
+            
+            # Get machine details and IP address
+            machine_details = self.get_machine_details()
+            ip_address = machine_details.get("ip_address", self.get_ip_address())
+            
+            # Prepare the payload
+            payload = {
+                "message": message,
+                "bot_id": self.bot_id,
+                "machine_details": machine_details,
+                "ip_address": ip_address
+            }
+            
+            # Add image data if available
+            if self.image_data:
+                payload["image"] = self.image_data 
+
+            
+            # Make API call - use the URL directly (it already includes the endpoint path)
+            response = requests.post(
+                self.drona_url,
+                json=payload,
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                # Return response text, similar to other modes
+                return result.get("response", result.get("message", result.get("text", "")))
+            else:
+                if not test:
+                    print(f"❌ Drona API server error: HTTP {response.status_code}")
+                    try:
+                        error_detail = response.json()
+                        error_msg = error_detail.get("error", str(error_detail))
+                        print(f"❌ Server error message: {error_msg}")
+                        if response.status_code == 500:
+                            print("💡 This appears to be a server-side issue. Please contact the API administrator.")
+                    except:
+                        print(f"❌ Error response: {response.text[:200]}")
+                return None
+        except ImportError:
+            if not test:
+                print(f"❌ requests module not found. Please install it: pip3 install requests")
+            return None
+        except Exception as e:
+            if not test:
+                print(f"❌ Drona query failed: {e}")
+            elif test:
+                # Show error during test for debugging
+                print(f"⚠️ Drona test error: {e}")
             return None
     
     def clear_screen(self):
@@ -189,8 +395,10 @@ class Jarvis:
         print("🤖 AI Model Selection:")
         print("  jarvis 'command' -m slm     - Use SLM model (35.174.147.167:5000)")
         print("  jarvis 'command' -m gemini  - Use Gemini model (default)")
+        print("  jarvis 'command' -m drona -b <bot_id>  - Use Drona model")
         print("  jarvis -m slm               - Start interactive mode with SLM")
         print("  jarvis -m gemini            - Start interactive mode with Gemini")
+        print("  jarvis -m drona -b <bot_id> - Start interactive mode with Drona")
         print()
         print("🔑 Configuration:")
         print("  Gemini: jarvis configure -m gemini --api-key <api-key> [-n <model-name>]")
@@ -329,8 +537,6 @@ Current Directory: {info['current_dir']}"""
             # Create unified prompt - LLM decides the approach
             prompt = f"""You are Jarvis, an AI assistant for macOS terminal. 
 
-If user says some thing like 'i can buffer file this is protected document when i am opening my text.txt file in editor' or any such similar statement that means its a file association issue in that you close the file from text editor and open it in the Seclore Lite app via using '~/.local/bin/jarvis_files/seclore_lite_open.sh' with the file as argument, so send command to run it with the file path.
-
 Current System Information:
 {system_info}
 
@@ -399,12 +605,19 @@ Analyze the user's query and decide the best approach. Be thorough when analysis
                 response_text = self.query_slm(current_prompt)
                 if not response_text:
                     raise Exception("SLM query failed")
+            elif self.model == 'drona':
+                # For drona mode, send the user's message (query) as the message field
+                # The API will receive message, machine_details, and IP address
+                response_text = self.query_drona(current_prompt)
+                if not response_text:
+                    raise Exception("Drona query failed")
             else:  # gemini
                 response = self.ai_model.generate_content(current_prompt)
                 response_text = response.text.strip()
             
             # Try to parse as JSON
             json_response = self.parse_json_response(response_text)
+            print(json_response)
             
             if json_response and "command" in json_response:
                 # Command execution needed
@@ -496,6 +709,11 @@ Continue the flow based on the output."""
                     response_text = self.query_slm(context)
                     if not response_text:
                         raise Exception("SLM query failed")
+                elif self.model == 'drona':
+                    # For drona mode, send the user's message (query) as the message field
+                    response_text = self.query_drona(current_query)
+                    if not response_text:
+                        raise Exception("Drona query failed")
                 else:  # gemini
                     response = self.ai_model.generate_content(context)
                     response_text = response.text.strip()
@@ -838,7 +1056,7 @@ Respond with JSON for commands or plain text for information."""
                 print(f"❌ Error: {e}")
                 print()
 
-def configure_api_key(model, api_key=None, model_name=None, slm_url=None):
+def configure_api_key(model, api_key=None, model_name=None, slm_url=None, drona_url=None, bot_id=None):
     """Configure settings for a model"""
     config = load_config()
     
@@ -869,9 +1087,30 @@ def configure_api_key(model, api_key=None, model_name=None, slm_url=None):
         print(f"✅ SLM server URL configured successfully")
         print(f"✅ Server URL set to: {slm_url}")
         print("💡 You can now use jarvis with: jarvis 'your question' -m slm")
+    elif model == 'drona':
+        if drona_url:
+            config['drona_url'] = drona_url
+        if bot_id:
+            config['drona_bot_id'] = bot_id
+        
+        if not drona_url and not bot_id:
+            print("❌ At least one of --url or --bot-id is required for Drona model")
+            print("❌ Usage: jarvis configure -m drona --url <server-url> [-b <bot-id>]")
+            print("❌ Or: jarvis configure -m drona -b <bot-id> [--url <server-url>]")
+            print("❌ Example: jarvis configure -m drona --url http://35.174.147.167:5000 -b <bot-id>")
+            sys.exit(1)
+        
+        save_config(config)
+        if drona_url:
+            print(f"✅ Drona server URL configured successfully")
+            print(f"✅ Server URL set to: {drona_url}")
+        if bot_id:
+            print(f"✅ Drona bot ID configured successfully")
+            print(f"✅ Bot ID set to: {bot_id}")
+        print("💡 You can now use jarvis with: jarvis 'your question' -m drona [-b <bot_id>]")
     else:
         print(f"❌ Unknown model: {model}")
-        print("❌ Supported models: 'gemini', 'slm'")
+        print("❌ Supported models: 'gemini', 'slm', 'drona'")
         sys.exit(1)
 
 def main():
@@ -879,28 +1118,61 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == 'configure':
         parser = argparse.ArgumentParser(description='Jarvis - Configure Model Settings')
         parser.add_argument('configure', help='configure command')
-        parser.add_argument('-m', '--model', choices=['slm', 'gemini'], required=True,
+        parser.add_argument('-m', '--model', choices=['slm', 'gemini', 'drona'], required=True,
                           help='AI model to configure')
         parser.add_argument('-n', '--name', dest='model_name',
                           help='Model name for Gemini (e.g., gemini-2.5-flash, gemini-pro)')
         parser.add_argument('--api-key', dest='api_key',
                           help='API key for Gemini model')
-        parser.add_argument('--url', dest='slm_url',
-                          help='Server URL for SLM model (e.g., http://35.174.147.167:5000)')
+        parser.add_argument('--url', dest='url',
+                          help='Server URL for SLM or Drona model (e.g., http://35.174.147.167:5000)')
+        parser.add_argument('-b', '--bot-id', dest='bot_id',
+                          help='Bot ID for Drona model')
         args = parser.parse_args()
-        configure_api_key(args.model, args.api_key, args.model_name, args.slm_url)
+        
+        # Handle URL argument for both SLM and Drona
+        slm_url = args.url if args.model == 'slm' else None
+        drona_url = args.url if args.model == 'drona' else None
+        
+        configure_api_key(args.model, args.api_key, args.model_name, slm_url, drona_url, args.bot_id)
         return
     
     # Regular jarvis usage
     parser = argparse.ArgumentParser(description='Jarvis - Global Terminal AI Copilot')
     parser.add_argument('query', nargs='*', help='Query to ask Jarvis')
-    parser.add_argument('-m', '--model', choices=['slm', 'gemini'], default='gemini', 
+    parser.add_argument('-m', '--model', choices=['slm', 'gemini', 'drona'], default='gemini', 
                        help='AI model to use (default: gemini)')
+    parser.add_argument('-b', '--bot-id', dest='bot_id',
+                       help='Bot ID for Drona model (required when using -m drona)')
+    parser.add_argument('-img', '--image', dest='image_path',
+                       help='Path to image file to send with the query (supported formats: jpg, png, gif, webp, bmp)')
     
     args = parser.parse_args()
     
+    # Validate image file exists if provided
+    if args.image_path:
+        image_file = Path(args.image_path)
+        if not image_file.exists():
+            print(f"❌ Image file not found: {args.image_path}")
+            sys.exit(1)
+        if not image_file.is_file():
+            print(f"❌ Path is not a file: {args.image_path}")
+            sys.exit(1)
+    
+    # For drona mode, try to get bot_id from config if not provided
+    if args.model == 'drona' and not args.bot_id:
+        config = load_config()
+        args.bot_id = config.get('drona_bot_id')
+    
+    # Validate drona mode requires bot_id (either from command line or config)
+    if args.model == 'drona' and not args.bot_id:
+        print("❌ Bot ID is required for Drona mode")
+        print("❌ Usage: jarvis 'your message' -m drona -b <bot_id>")
+        print("   Or configure it: jarvis configure -m drona -b <bot_id>")
+        sys.exit(1)
+    
     print("🚀 Starting Jarvis...")
-    jarvis = Jarvis(model=args.model)
+    jarvis = Jarvis(model=args.model, bot_id=args.bot_id, image_path=args.image_path)
     
     # If query provided, process it directly
     if args.query:
