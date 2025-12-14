@@ -19,11 +19,21 @@ jarvis              # Interactive mode
 ## 💬 Example Commands
 
 ```bash
+# Basic usage
 jarvis "list files"
 jarvis "what's my disk space?"
 jarvis "open finder here"
 jarvis "check system health"
 jarvis "show running processes"
+
+# Use different AI models
+jarvis "your question" -m gemini    # Use Gemini (default)
+jarvis "your question" -m slm       # Use SLM server
+jarvis "your question" -m drona -b <bot_id>  # Use Drona model
+
+# Send images with queries
+jarvis "what's in this image?" -img path/to/image.jpg
+jarvis "analyze this screenshot" -m drona -b <bot_id> -img screenshot.png
 ```
 
 ## ⚡ Features
@@ -33,7 +43,9 @@ jarvis "show running processes"
 - ✅ Multi-turn conversations
 - ✅ Direct command execution
 - ✅ Natural language interface
-- ✅ Powered by Google Gemini AI
+- ✅ Multiple AI models: Gemini, SLM, and Drona
+- ✅ Image support - send images with queries
+- ✅ Machine context awareness (for Drona model)
 
 ## 📁 Files
 
@@ -49,10 +61,19 @@ jarvis "show running processes"
 - Internet connection
 - Dependencies auto-installed
 
+### Supported Image Formats
+- JPEG/JPG
+- PNG
+- GIF
+- WebP
+- BMP
+
 ## 🎯 Interactive Mode
 
 ```bash
-jarvis
+jarvis                    # Interactive mode with Gemini (default)
+jarvis -m slm             # Interactive mode with SLM
+jarvis -m drona -b <bot_id>  # Interactive mode with Drona
 ```
 
 Then type commands directly:
@@ -63,6 +84,30 @@ Then type commands directly:
 - `memory` - Memory usage
 - `disk` - Disk usage
 - Any question!
+
+## 🔧 Configuration
+
+### Configure Gemini
+```bash
+jarvis configure -m gemini --api-key <your-api-key> [-n <model-name>]
+# Example: jarvis configure -m gemini -n 'gemini-2.5-flash' --api-key 'your-key'
+# Get API key from: https://makersuite.google.com/app/apikey
+```
+
+### Configure SLM
+```bash
+jarvis configure -m slm --url <server-url>
+# Example: jarvis configure -m slm --url http://35.174.147.167:5000
+```
+
+### Configure Drona
+```bash
+jarvis configure -m drona --url <server-url> [-b <bot-id>]
+# Or configure bot ID only:
+jarvis configure -m drona -b <bot-id>
+```
+
+Configuration is saved to `~/.jarvis/config.json`
 
 ## 🎉 Enjoy Jarvis!
 

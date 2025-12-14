@@ -1,7 +1,7 @@
-# 🚀 Jarvis v1.0.0 - Release Notes
+# 🚀 Jarvis v1.2.0 - Release Notes
 
 ## Release Title
-**Jarvis v1.0.0: AI Terminal Assistant with Secure Configuration**
+**Jarvis v1.2.0: AI Terminal Assistant with Secure Configuration**
 
 ---
 
@@ -12,9 +12,22 @@
 - **Configuration command** - Easy setup with `jarvis configure` command
 - **Environment-based storage** - API keys never exposed in code or repositories
 
+### 🖼️ Image Support
+- **Image queries** - Send images with your questions using `-img` or `--image` flag
+- **Multiple formats** - Supports JPEG, PNG, GIF, WebP, and BMP
+- **Base64 encoding** - Images automatically encoded and sent to AI models
+- **Visual analysis** - Perfect for analyzing screenshots, diagrams, or photos
+
+### 🤖 Drona Model Integration
+- **Drona AI support** - New AI model option with bot-based configuration
+- **Machine context** - Automatically sends machine details and IP address to Drona API
+- **Bot ID configuration** - Configure bot ID via command line or config file
+- **Enhanced context** - Drona receives system information for better responses
+
 ### 🔧 Model Configuration System
-- **Gemini Configuration**: Configure API key and model name
+- **Gemini Configuration**: Configure API key and model name (default: gemini-2.5-flash)
 - **SLM Configuration**: Configure server URL
+- **Drona Configuration**: Configure server URL and bot ID
 - **Persistent settings** - Configuration saved automatically and reused
 
 ### 📦 Homebrew Installation
@@ -30,6 +43,80 @@
 ---
 
 ## 📋 Detailed Changes
+
+### 🖼️ Image Support
+
+#### Image Query Feature
+Jarvis now supports sending images with queries for visual analysis. This is particularly useful for:
+- Analyzing screenshots
+- Reading diagrams or charts
+- Describing photos
+- Troubleshooting visual issues
+
+**Usage:**
+```bash
+jarvis "what's in this image?" -img path/to/image.jpg
+jarvis "analyze this screenshot" -m drona -b <bot-id> -img screenshot.png
+```
+
+**Supported Formats:**
+- JPEG/JPG
+- PNG
+- GIF
+- WebP
+- BMP
+
+**Technical Details:**
+- Images are automatically encoded to base64
+- MIME type is detected from file extension
+- Image data is included in API requests when available
+- Works with all AI models (Gemini, SLM, Drona)
+
+### 🤖 Drona Model Integration
+
+#### New AI Model Option
+Drona is a new AI model option that provides enhanced context awareness by automatically sending machine details and IP address information.
+
+**Features:**
+- Bot-based configuration with unique bot IDs
+- Automatic machine context transmission
+- IP address detection and inclusion
+- System details (CPU, memory, disk, processes, etc.) sent automatically
+- Configurable API endpoint
+
+**Usage:**
+```bash
+# With bot ID from command line
+jarvis "your question" -m drona -b <bot-id>
+
+# With bot ID from config
+jarvis "your question" -m drona
+
+# Interactive mode
+jarvis -m drona -b <bot-id>
+```
+
+**Machine Context Sent:**
+- System information (OS, release, machine type)
+- CPU usage and frequency
+- Memory usage and availability
+- Disk usage and free space
+- Load averages
+- Running process count
+- Current working directory
+- IP address
+
+**Configuration:**
+```bash
+# Configure bot ID
+jarvis configure -m drona -b <bot-id>
+
+# Configure API URL (optional, has default)
+jarvis configure -m drona --url <server-url>
+
+# Configure both
+jarvis configure -m drona --url <server-url> -b <bot-id>
+```
 
 ### 🔑 Configuration System
 
@@ -62,6 +149,24 @@ jarvis configure -m slm --url <server-url>
 jarvis configure -m slm --url http://35.174.147.167:5000
 ```
 
+**Drona Configuration:**
+```bash
+jarvis configure -m drona --url <server-url> [-b <bot-id>]
+jarvis configure -m drona -b <bot-id> [--url <server-url>]
+```
+
+**Examples:**
+```bash
+# Configure both URL and bot ID
+jarvis configure -m drona --url https://api.vtorlabs.com/drona/v1/jarvis/chat -b your-bot-id
+
+# Configure bot ID only (uses default URL)
+jarvis configure -m drona -b your-bot-id
+
+# Configure URL only (bot ID must be provided at runtime)
+jarvis configure -m drona --url https://api.vtorlabs.com/drona/v1/jarvis/chat
+```
+
 #### Configuration File Location
 - **Path**: `~/.jarvis/config.json`
 - **Format**: JSON
@@ -72,7 +177,9 @@ jarvis configure -m slm --url http://35.174.147.167:5000
 {
   "gemini_api_key": "your-api-key",
   "gemini_model_name": "gemini-2.5-flash",
-  "slm_url": "http://35.174.147.167:5000"
+  "slm_url": "http://35.174.147.167:5000",
+  "drona_url": "https://api.vtorlabs.com/drona/v1/jarvis/chat",
+  "drona_bot_id": "your-bot-id"
 }
 ```
 
@@ -144,6 +251,12 @@ jarvis configure -m gemini --api-key "your-api-key"
 jarvis configure -m slm --url "http://your-slm-server:5000"
 ```
 
+**Configure Drona (optional):**
+```bash
+jarvis configure -m drona -b "your-bot-id"
+jarvis configure -m drona --url "https://api.vtorlabs.com/drona/v1/jarvis/chat" -b "your-bot-id"
+```
+
 ### 3. Usage
 
 ```bash
@@ -156,6 +269,11 @@ jarvis
 # Use specific model
 jarvis "your question" -m gemini
 jarvis "your question" -m slm
+jarvis "your question" -m drona -b <bot-id>
+
+# Send image with query
+jarvis "what's in this image?" -img path/to/image.jpg
+jarvis "analyze this screenshot" -m drona -b <bot-id> -img screenshot.png
 ```
 
 ---
@@ -164,9 +282,11 @@ jarvis "your question" -m slm
 
 ### 🤖 AI-Powered Terminal Assistant
 - **Natural language interface** - Ask questions in plain English
-- **Multi-model support** - Choose between Gemini AI or SLM
+- **Multi-model support** - Choose between Gemini AI, SLM, or Drona
 - **Intelligent command execution** - AI decides when to run commands vs. provide answers
 - **Multi-turn conversations** - Context-aware interactions
+- **Image analysis** - Send images with queries for visual analysis
+- **Machine context** - Drona model receives system details and IP address automatically
 
 ### 💻 System Management
 - **System health monitoring** - CPU, memory, disk usage analysis
@@ -224,6 +344,8 @@ jarvis "your question" -m slm
 - Requires internet connection for AI functionality
 - Some advanced features may require system permissions
 - SLM server URL defaults to `http://35.174.147.167:5000` if not configured
+- Drona model requires bot ID (either from config or command line)
+- Image support requires valid image file paths
 
 ---
 
@@ -296,12 +418,16 @@ Built with:
 
 ### v1.0.0 (Current)
 - ✨ Secure API key configuration system
-- ✨ Model configuration for Gemini and SLM
+- ✨ Model configuration for Gemini, SLM, and Drona
+- ✨ Drona AI model integration with machine context
+- ✨ Image support for visual analysis queries
+- ✨ Automatic machine details and IP address transmission (Drona)
 - ✨ Homebrew formula and installation
 - ✨ Standalone binary distribution
 - 🔒 Removed hardcoded API keys
 - 📦 PyInstaller-based packaging
 - 🐛 Fixed compatibility with shell aliases
+- 🔧 Default Gemini model set to gemini-2.5-flash
 
 ---
 
