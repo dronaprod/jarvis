@@ -416,15 +416,21 @@ Built with:
 
 ## 📊 Version History
 
-### v1.0.0 (Current)
+### v1.2.0 (Current)
 - ✨ Secure API key configuration system
 - ✨ Model configuration for Gemini, SLM, and Drona
 - ✨ Drona AI model integration with machine context
 - ✨ Image support for visual analysis queries
 - ✨ Automatic machine details and IP address transmission (Drona)
-- ✨ Homebrew formula and installation
 - ✨ Standalone binary distribution
-- 🔒 Removed hardcoded API keys
+- 📦 PyInstaller-based packaging
+- 🐛 Fixed compatibility with shell aliases
+- 🔧 Default Gemini model set to gemini-2.5-flash
+
+### v1.1.0
+- ✨ Secure API key configuration system
+- ✨ Model configuration for Gemini and SLM
+- ✨ Standalone binary distribution
 - 📦 PyInstaller-based packaging
 - 🐛 Fixed compatibility with shell aliases
 - 🔧 Default Gemini model set to gemini-2.5-flash
@@ -432,7 +438,7 @@ Built with:
 ---
 
 **Download**: Available via Homebrew or GitHub Releases  
-**Version**: 1.0.0  
+**Version**: 1.2.0  
 **Release Date**: November 2024  
 **License**: MIT
 
