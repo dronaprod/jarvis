@@ -34,6 +34,12 @@ jarvis "your question" -m drona -b <bot_id>  # Use Drona model
 # Send images with queries
 jarvis "what's in this image?" -img path/to/image.jpg
 jarvis "analyze this screenshot" -m drona -b <bot_id> -img screenshot.png
+
+# Voice commands
+jarvis -v                    # Voice mode with Gemini (default)
+jarvis -v -m gemini         # Voice mode with Gemini
+jarvis -v -m slm             # Voice mode with SLM
+jarvis -v -m drona -b <bot_id>  # Voice mode with Drona
 ```
 
 ## ⚡ Features
@@ -46,6 +52,7 @@ jarvis "analyze this screenshot" -m drona -b <bot_id> -img screenshot.png
 - ✅ Multiple AI models: Gemini, SLM, and Drona
 - ✅ Image support - send images with queries
 - ✅ Machine context awareness (for Drona model)
+- ✅ Voice commands - speak commands hands-free
 
 ## 📁 Files
 
@@ -60,6 +67,12 @@ jarvis "analyze this screenshot" -m drona -b <bot_id> -img screenshot.png
 - macOS
 - Internet connection
 - Dependencies auto-installed
+
+### Voice Command Requirements
+- Microphone access (for voice mode)
+- SpeechRecognition library
+- PyAudio library
+- PortAudio (install via `brew install portaudio` on macOS)
 
 ### Supported Image Formats
 - JPEG/JPG
@@ -84,6 +97,38 @@ Then type commands directly:
 - `memory` - Memory usage
 - `disk` - Disk usage
 - Any question!
+
+## 🎤 Voice Command Mode
+
+Jarvis supports hands-free voice commands! Simply say "jarvis" followed by your command.
+
+**Usage:**
+```bash
+jarvis -v                    # Voice mode with Gemini (default)
+jarvis -v -m gemini          # Voice mode with Gemini
+jarvis -v -m slm              # Voice mode with SLM
+jarvis -v -m drona -b <bot_id>  # Voice mode with Drona
+```
+
+**How it works:**
+1. Start voice mode with `jarvis -v`
+2. Say "jarvis" followed by your command
+3. Example: "jarvis list files in this directory"
+4. Example: "jarvis check if my CPU usage is normal"
+5. Jarvis will process your command with full agentic AI support
+6. Say "quit" or press Ctrl+C to exit
+
+**Features:**
+- ✅ Wake word detection ("jarvis")
+- ✅ Full agentic AI iteration support
+- ✅ Works with all AI models (Gemini, SLM, Drona)
+- ✅ Automatic command output analysis
+- ✅ Continuous listening mode
+
+**Requirements:**
+- Microphone access
+- Internet connection (for Google Speech Recognition)
+- SpeechRecognition and PyAudio libraries (auto-installed)
 
 ## 🔧 Configuration
 

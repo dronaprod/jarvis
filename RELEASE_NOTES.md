@@ -1,7 +1,7 @@
-# 🚀 Jarvis v1.2.0 - Release Notes
+# 🚀 Jarvis v1.3.0 - Release Notes
 
 ## Release Title
-**Jarvis v1.2.0: AI Terminal Assistant with Secure Configuration**
+**Jarvis v1.3.0: Voice Commands & Enhanced Agentic AI**
 
 ---
 
@@ -11,6 +11,20 @@
 - **No more hardcoded API keys** - All API keys are now stored securely in `~/.jarvis/config.json`
 - **Configuration command** - Easy setup with `jarvis configure` command
 - **Environment-based storage** - API keys never exposed in code or repositories
+
+### 🎤 Voice Command Support
+- **Hands-free operation** - Speak commands instead of typing
+- **Wake word detection** - Say "jarvis" followed by your command
+- **Full agentic AI support** - Voice commands use the same intelligent iteration as text commands
+- **Continuous listening** - Keeps listening for multiple commands
+- **Multi-model support** - Works with Gemini, SLM, and Drona models
+
+### 🤖 Enhanced Agentic AI Iteration
+- **Improved iteration flow** - Better handling of intermediate vs. last commands
+- **Automatic command output analysis** - AI receives command outputs and continues iterating
+- **Smart command detection** - Automatically converts analysis queries to use intermediate commands
+- **Command sanitization** - Prevents interactive command timeouts (e.g., auto-converts `top` to `top -l 1`)
+- **Original query preservation** - Always includes original user query in iteration prompts
 
 ### 🖼️ Image Support
 - **Image queries** - Send images with your questions using `-img` or `--image` flag
@@ -43,6 +57,82 @@
 ---
 
 ## 📋 Detailed Changes
+
+### 🎤 Voice Command Support
+
+#### Hands-Free Voice Commands
+Jarvis now supports voice commands, allowing you to interact hands-free by speaking commands instead of typing.
+
+**Features:**
+- Wake word detection - Say "jarvis" followed by your command
+- Continuous listening mode - Keeps listening for multiple commands
+- Full agentic AI support - Voice commands use the same intelligent iteration system as text commands
+- Automatic command output analysis - AI iterates through commands until complete
+- Works with all AI models - Gemini, SLM, and Drona
+
+**Usage:**
+```bash
+# Start voice command mode
+jarvis -v
+
+# Voice mode with specific model
+jarvis -v -m gemini
+jarvis -v -m slm
+jarvis -v -m drona -b <bot_id>
+```
+
+**How it works:**
+1. Start voice mode with `jarvis -v`
+2. Say "jarvis" followed by your command
+3. Example: "jarvis list files in this directory"
+4. Example: "jarvis check if my CPU usage is normal"
+5. Jarvis processes your command with full agentic AI support
+6. The system automatically iterates through commands until complete
+7. Say "quit" or press Ctrl+C to exit
+
+**Example Voice Commands:**
+- "jarvis list files in this directory"
+- "jarvis check if my CPU usage is normal"
+- "jarvis show me running processes"
+- "jarvis what's my disk space?"
+- "jarvis check memory usage"
+
+**Technical Details:**
+- Uses Google Speech Recognition (requires internet connection)
+- Automatically adjusts for ambient noise
+- Supports phrase time limit of 15 seconds per command
+- Wake word: "jarvis" (case-insensitive)
+- Command extraction: Everything after "jarvis" is treated as the command
+
+**Requirements:**
+- Microphone access
+- Internet connection (for Google Speech Recognition)
+- SpeechRecognition library (auto-installed)
+- PyAudio library (auto-installed)
+- PortAudio (install via `brew install portaudio` on macOS)
+
+**Installation:**
+```bash
+# Install dependencies
+pip3 install SpeechRecognition pyaudio --user --break-system-packages
+
+# On macOS, install PortAudio first
+brew install portaudio
+```
+
+**Agentic Flow:**
+Voice commands use the same agentic iteration system as text commands:
+- Commands marked as "intermediate" trigger automatic iteration
+- Command outputs are sent back to the AI for analysis
+- The AI continues iterating until it has enough information
+- Final answers are provided as plain text responses
+
+**Enhanced Agentic AI Improvements:**
+- Improved prompt engineering to ensure analysis queries use "intermediate" commands
+- Safety checks automatically convert "last" to "intermediate" for analysis queries
+- Original user query is always preserved and included in iteration prompts
+- Command sanitization prevents timeouts by converting interactive commands to non-interactive versions
+- Better iteration flow with clear progress indicators
 
 ### 🖼️ Image Support
 
@@ -274,6 +364,12 @@ jarvis "your question" -m drona -b <bot-id>
 # Send image with query
 jarvis "what's in this image?" -img path/to/image.jpg
 jarvis "analyze this screenshot" -m drona -b <bot-id> -img screenshot.png
+
+# Voice commands
+jarvis -v                    # Voice mode with Gemini (default)
+jarvis -v -m gemini          # Voice mode with Gemini
+jarvis -v -m slm             # Voice mode with SLM
+jarvis -v -m drona -b <bot-id>  # Voice mode with Drona
 ```
 
 ---
@@ -285,6 +381,8 @@ jarvis "analyze this screenshot" -m drona -b <bot-id> -img screenshot.png
 - **Multi-model support** - Choose between Gemini AI, SLM, or Drona
 - **Intelligent command execution** - AI decides when to run commands vs. provide answers
 - **Multi-turn conversations** - Context-aware interactions
+- **Voice commands** - Speak commands hands-free with wake word detection
+- **Agentic AI iteration** - Automatically iterates through commands until complete
 - **Image analysis** - Send images with queries for visual analysis
 - **Machine context** - Drona model receives system details and IP address automatically
 
@@ -302,9 +400,17 @@ jarvis "analyze this screenshot" -m drona -b <bot-id> -img screenshot.png
 
 ### 🎯 Interactive Mode
 - **Interactive terminal interface** - Continuous conversation mode
+- **Voice command mode** - Hands-free operation with wake word detection
 - **Quick commands** - Shortcuts for common tasks (cpu, memory, disk, etc.)
 - **Help system** - Built-in help and examples
 - **Clean interface** - Organized output with clear formatting
+
+### 🎤 Voice Command Mode
+- **Wake word detection** - Say "jarvis" followed by your command
+- **Continuous listening** - Keeps listening for multiple commands
+- **Full agentic support** - Uses same intelligent iteration as text commands
+- **Multi-model support** - Works with all AI models
+- **Automatic analysis** - AI iterates through commands until complete
 
 ---
 
@@ -362,6 +468,9 @@ jarvis "analyze this screenshot" -m drona -b <bot-id> -img screenshot.png
 - google-generativeai
 - psutil
 - requests
+- SpeechRecognition (for voice commands)
+- PyAudio (for voice commands)
+- PortAudio (for PyAudio on macOS - install via `brew install portaudio`)
 
 ---
 
@@ -416,7 +525,17 @@ Built with:
 
 ## 📊 Version History
 
-### v1.2.0 (Current)
+### v1.3.0 (Current)
+- ✨ Voice command support with wake word detection
+- ✨ Hands-free operation - speak commands instead of typing
+- ✨ Enhanced agentic AI iteration for voice commands
+- ✨ Automatic command output analysis and iteration
+- ✨ Continuous listening mode for multiple commands
+- 🔧 Improved prompt engineering for better agentic flow
+- 🔧 Command sanitization to prevent interactive command timeouts
+- 📦 Added SpeechRecognition and PyAudio dependencies
+
+### v1.2.0
 - ✨ Secure API key configuration system
 - ✨ Model configuration for Gemini, SLM, and Drona
 - ✨ Drona AI model integration with machine context
@@ -438,7 +557,7 @@ Built with:
 ---
 
 **Download**: Available via Homebrew or GitHub Releases  
-**Version**: 1.2.0  
-**Release Date**: November 2024  
+**Version**: 1.3.0  
+**Release Date**: December 2024  
 **License**: MIT
 

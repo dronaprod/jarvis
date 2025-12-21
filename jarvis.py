@@ -392,6 +392,14 @@ class Jarvis:
         print("  processes   - Show running processes")
         print("  system      - Complete system health analysis")
         print()
+        print("🎤 Voice Commands:")
+        print("  jarvis -v              - Start voice command mode")
+        print("  jarvis -v -m gemini    - Voice mode with Gemini model")
+        print("  jarvis -v -m slm       - Voice mode with SLM model")
+        print("  jarvis -v -m drona -b <bot_id> - Voice mode with Drona model")
+        print("  Say 'jarvis' followed by your command")
+        print("  Example: 'jarvis list files in this directory'")
+        print()
         print("🤖 AI Model Selection:")
         print("  jarvis 'command' -m slm     - Use SLM model (35.174.147.167:5000)")
         print("  jarvis 'command' -m gemini  - Use Gemini model (default)")
@@ -548,18 +556,26 @@ RESPONSE FORMAT:
   OR
   {{"command": "command_to_execute", "command_number": "intermediate"}}
   
-  YOU decide whether to use "intermediate" or "last" based on the query:
-  - Use "intermediate" when:
+  CRITICAL DECISION: "intermediate" vs "last"
+  
+  ⚠️ DEFAULT TO "intermediate" FOR ANY QUERY THAT NEEDS ANALYSIS OR INTERPRETATION ⚠️
+  
+  - ALWAYS use "intermediate" when:
+    * The query asks "is", "check", "analyze", "what", "why", "how", "show me", "tell me"
     * The query requires analysis, investigation, or multi-step reasoning
     * You need to gather data first, then analyze it before providing final answer
     * Multiple commands may be needed to fully answer the question
     * The command output needs to be examined before concluding
     * The query asks about system state, security, performance, or requires interpretation
+    * The query asks about CPU, memory, disk, processes, network, or system health
+    * The user wants you to analyze or interpret command output
+    * Examples: "is my CPU normal?", "check memory", "what processes are running?", "analyze system"
   
-  - Use "last" when:
+  - ONLY use "last" when:
     * It's a simple, single-step command that doesn't need analysis
-    * You're certain no further commands or analysis is needed
     * The command output is self-explanatory and doesn't need interpretation
+    * Examples: "list files", "show current directory", "open finder"
+    * The user explicitly wants just the raw command output with no analysis
 
 - If user just needs information/answer (no command), respond with plain text directly (NO JSON).
   Just provide your answer as regular text that will be printed directly.
@@ -572,16 +588,53 @@ You can execute ANY valid macOS/Unix command including:
 - Directory navigation: cd, pwd, etc.
 - Custom scripts and any other valid commands
 
-Examples:
-- User: "list files" → {{"command": "ls -la", "command_number": "last"}}
-- User: "what is Python?" → Python is a high-level programming language...
-- User: "check disk space" → {{"command": "df -h", "command_number": "last"}}
-- User: "is there any suspicious process sending data?" → {{"command": "lsof -i TCP -P -n", "command_number": "intermediate"}}
-  (After getting output, analyze it and provide insights, or run more commands if needed)
-- User: "create test.txt and list files" → {{"command": "touch test.txt", "command_number": "intermediate"}}
-  (Then after execution, you'll get output and can send: {{"command": "ls -la", "command_number": "last"}})
+CRITICAL - NON-INTERACTIVE COMMANDS REQUIRED:
+- ALWAYS use "top -l 1" instead of "top" (runs once and exits)
+- NEVER use "top" without "-l 1" flag - it will timeout
+- NEVER use "top -o mem" - use "top -l 1 -o mem" instead
+- NEVER use "top -o cpu" - use "top -l 1 -o cpu" instead
+- Use "ps aux" as alternative to interactive "top"
+- Commands must complete within 30 seconds or they will timeout
+- For monitoring commands, ALWAYS use flags that make them exit automatically
+- If you generate "top" without "-l 1", the system will auto-fix it, but you should get it right
 
-Analyze the user's query and decide the best approach. Be thorough when analysis is needed, efficient when simple commands suffice."""
+AGENTIC BEHAVIOR - CRITICAL:
+- When you use "intermediate", the command output will be sent back to you automatically
+- You MUST analyze the output and either:
+  * Run more commands (use "intermediate" again)
+  * Provide a final answer (use "last" command OR plain text response)
+- DO NOT use "last" after the first command if the query needs analysis
+- The system will keep iterating until you provide a final answer (plain text) or use "last"
+- Example flow:
+  1. Query: "is my CPU usage normal?"
+  2. You: {{"command": "top -l 1 -o cpu", "command_number": "intermediate"}}
+  3. System executes, sends output back to you
+  4. You analyze output, then: either run more commands OR provide plain text answer
+  5. If you provide plain text, the flow stops (that's your final answer)
+
+Examples (NOTE: All "top" commands MUST include "-l 1"):
+- User: "list files" → {{"command": "ls -la", "command_number": "last"}}
+  (Simple command, no analysis needed)
+- User: "what is Python?" → Python is a high-level programming language...
+  (Information question, no command needed)
+- User: "check disk space" → {{"command": "df -h", "command_number": "intermediate"}}
+  (User said "check" - needs analysis, use intermediate)
+- User: "is my CPU usage normal?" → {{"command": "top -l 1 -o cpu", "command_number": "intermediate"}}
+  (After getting output, analyze CPU usage and provide insights as plain text response)
+- User: "check memory usage" → {{"command": "top -l 1 -o mem", "command_number": "intermediate"}}
+  (After getting output, analyze memory usage and provide insights as plain text response)
+- User: "show me running processes" → {{"command": "ps aux", "command_number": "intermediate"}}
+  (User said "show me" - needs analysis/formatting, use intermediate)
+- User: "is there any suspicious process sending data?" → {{"command": "lsof -i TCP -P -n", "command_number": "intermediate"}}
+  (After getting output, analyze it and provide insights as plain text response)
+- User: "create test.txt and list files" → {{"command": "touch test.txt", "command_number": "intermediate"}}
+  (Then after execution, you'll get output and can send: {{"command": "ls -la", "command_number": "intermediate"}})
+  (After ls output, provide summary as plain text response)
+
+WRONG (will timeout): "top -o mem", "top -o cpu", "top"
+CORRECT (will work): "top -l 1 -o mem", "top -l 1 -o cpu", "top -l 1"
+
+Analyze the user's query and decide the best approach. Be thorough when analysis is needed, efficient when simple commands suffice. Use agentic iteration when multiple steps are required."""
 
             # Process query with unified command execution flow
             self.execute_command_flow(query, prompt, system_info)
@@ -591,7 +644,7 @@ Analyze the user's query and decide the best approach. Be thorough when analysis
             print("❌ AI connection may be lost. Please restart Jarvis.")
     
     def execute_command_flow(self, initial_query, initial_prompt, system_info):
-        """Execute command flow with intermediate/last command handling"""
+        """Execute command flow with intermediate/last command handling - Agentic iteration"""
         max_iterations = 10
         iteration = 0
         current_query = initial_query
@@ -600,13 +653,19 @@ Analyze the user's query and decide the best approach. Be thorough when analysis
         while iteration < max_iterations:
             iteration += 1
             
+            # Show iteration progress for agentic flow
+            if iteration > 1:
+                print(f"\n🔄 Agentic iteration {iteration}/{max_iterations}...")
+            
             # Get response from AI model
             if self.model == 'slm':
                 response_text = self.query_slm(current_prompt)
                 if not response_text:
                     raise Exception("SLM query failed")
             elif self.model == 'drona':
-                # For drona mode, send the user's message (query) as the message field
+                # For drona mode, send the current prompt which includes:
+                # - First iteration: original user query
+                # - Intermediate iterations: original query + command output
                 # The API will receive message, machine_details, and IP address
                 response_text = self.query_drona(current_prompt)
                 if not response_text:
@@ -617,14 +676,27 @@ Analyze the user's query and decide the best approach. Be thorough when analysis
             
             # Try to parse as JSON
             json_response = self.parse_json_response(response_text)
-            print(json_response)
+            if json_response:
+                print(f"📋 AI Response (iteration {iteration}): {json_response}")
             
             if json_response and "command" in json_response:
                 # Command execution needed
                 command = json_response["command"]
                 command_number = json_response.get("command_number", "last")
                 
+                # Safety check: If query needs analysis but LLM said "last", treat as "intermediate"
+                analysis_keywords = ["is", "check", "analyze", "what", "why", "how", "show", "tell", "normal", "usage", "health", "status"]
+                query_lower = initial_query.lower()
+                needs_analysis = any(keyword in query_lower for keyword in analysis_keywords)
+                
+                if needs_analysis and command_number == "last" and iteration == 1:
+                    print(f"⚠️  Query appears to need analysis, treating as intermediate...")
+                    command_number = "intermediate"
+                
                 print(f"\n🚀 Executing command: {command}")
+                if command_number == "intermediate":
+                    print("🔄 This is an intermediate command - more iterations may follow...")
+                    print(f"📋 Original query: {initial_query}")
                 
                 # Execute command and get results
                 result = self.execute_command_silent(command)
@@ -640,7 +712,7 @@ Analyze the user's query and decide the best approach. Be thorough when analysis
                 
                 # If last command, stop flow
                 if command_number == "last":
-                    print("\n✅ Flow complete!")
+                    print("\n✅ Agentic flow complete!")
                     break
                 
                 # If intermediate, send output back to LLM and continue
@@ -649,28 +721,35 @@ Analyze the user's query and decide the best approach. Be thorough when analysis
                     if not output_text:
                         output_text = "Command executed with no output"
                     
-                    # Update prompt for next iteration
+                    print(f"\n🔄 Analyzing output and determining next steps...")
+                    print(f"📤 Sending command output back to LLM with original query...")
+                    
+                    # Update prompt for next iteration - ALWAYS include original query
                     current_prompt = f"""You are Jarvis, an AI assistant for macOS terminal.
 
 Current System Information:
 {system_info}
 
-Previous Query: {current_query}
+ORIGINAL User Request: {initial_query}
 
-Previous Command Executed: {command}
+Command Just Executed: {command}
 Command Output:
 {output_text}
 Command Success: {result["success"]}
 
-Based on the command output above, determine if more commands are needed:
-- If more commands needed: respond with JSON {{"command": "next_command", "command_number": "intermediate"}}
-- If done: respond with JSON {{"command": "final_command_if_needed", "command_number": "last"}}
-- If no more commands needed but want to provide info: respond with plain text (NO JSON)
+Based on the command output above, continue working on the ORIGINAL user request: "{initial_query}"
 
-Continue the flow based on the output."""
+IMPORTANT: You have 3 options:
+1. If more commands needed: respond with JSON {{"command": "next_command", "command_number": "intermediate"}}
+2. If done and want to provide final answer: respond with PLAIN TEXT (NO JSON) - this will end the flow
+3. Only use "last" if you need to run one final command that doesn't need analysis
+
+⚠️ PREFER PLAIN TEXT RESPONSE over "last" when providing your final analysis/answer ⚠️
+
+Continue the agentic flow. Use the command output above to help answer: "{initial_query}"
+Iterate as needed to fully answer the user's original request."""
                     
-                    # Update query for context
-                    current_query = f"Previous command '{command}' output: {output_text[:200]}..."
+                    # Keep original query for context (don't overwrite it)
                     continue
             else:
                 # Plain text response - print directly
@@ -815,32 +894,77 @@ RESPONSE FORMAT:
 - If you just need to provide information/answer (no command), respond with plain text directly (NO JSON).
   Just provide your answer as regular text that will be printed directly.
 
+CRITICAL - NON-INTERACTIVE COMMANDS REQUIRED:
+- ALWAYS use "top -l 1" instead of "top" (runs once and exits)
+- NEVER use "top" without "-l 1" flag - it will timeout
+- NEVER use "top -o mem" - use "top -l 1 -o mem" instead
+- NEVER use "top -o cpu" - use "top -l 1 -o cpu" instead
+- Commands must complete within 30 seconds or they will timeout
+
 For system analysis, you should:
-1. First gather data with appropriate commands (top, ps, df, lsof, netstat, etc.)
+1. First gather data with appropriate commands (top -l 1, ps, df, lsof, netstat, etc.)
 2. Analyze the results - examine the output carefully
 3. Run additional commands if needed to get complete picture
 4. Provide comprehensive analysis with insights
 
-Examples:
+Examples (NOTE: All "top" commands MUST include "-l 1"):
 - User: "is my cpu utilization normal?" 
   → {{"command": "top -l 1 -o cpu", "command_number": "intermediate"}}
   → (After getting results) {{"command": "vm_stat", "command_number": "intermediate"}}
   → (After getting results) Plain text: "Based on the analysis, your CPU usage is X% which is normal. Memory usage is Y%..."
+- User: "check memory usage"
+  → {{"command": "top -l 1 -o mem", "command_number": "intermediate"}}
+  → (After analyzing output) Plain text: "Memory analysis: ..."
 - User: "is there any suspicious process sending data?"
   → {{"command": "lsof -i TCP -P -n", "command_number": "intermediate"}}
   → (After analyzing output) {{"command": "ps aux | grep <suspicious_pid>", "command_number": "intermediate"}}
   → (After getting more info) Plain text: "Analysis complete: Found X processes with network connections. Here's what I found..."
 
-Be conversational and thorough in your analysis. Don't just give one command - investigate properly! Always analyze command outputs before concluding.
+WRONG (will timeout): "top -o mem", "top -o cpu", "top"
+CORRECT (will work): "top -l 1 -o mem", "top -l 1 -o cpu", "top -l 1"
+
+Be conversational and thorough in your analysis. Don't just give one command - investigate properly! Always analyze command outputs before concluding. Use agentic iteration when multiple steps are required.
 
 Respond with JSON for commands or plain text for information."""
         
         return context
     
+    def sanitize_command(self, command):
+        """Convert interactive commands to non-interactive versions to prevent timeouts"""
+        command_lower = command.lower().strip()
+        
+        # Convert top commands to non-interactive versions
+        if command_lower.startswith('top ') and '-l' not in command_lower:
+            # If top doesn't have -l flag, add it
+            if 'top -' in command_lower:
+                # Insert -l 1 after 'top'
+                command = command.replace('top ', 'top -l 1 ', 1)
+            elif command_lower == 'top':
+                command = 'top -l 1'
+            else:
+                # top with other flags but no -l
+                command = command.replace('top ', 'top -l 1 ', 1)
+        
+        # Convert other potentially interactive commands
+        # htop, btop, etc. should be avoided, but if used, suggest alternatives
+        if 'htop' in command_lower or 'btop' in command_lower:
+            # Replace with ps aux or top -l 1
+            if 'htop' in command_lower:
+                command = command.replace('htop', 'top -l 1', 1)
+            if 'btop' in command_lower:
+                command = command.replace('btop', 'top -l 1', 1)
+        
+        return command
+    
     def execute_command_silent(self, command):
         """Execute command and return results without showing to user"""
         try:
-            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
+            # Sanitize command to prevent interactive/timeout issues
+            sanitized_command = self.sanitize_command(command)
+            if sanitized_command != command:
+                print(f"⚠️  Auto-converted interactive command: {command} → {sanitized_command}")
+            
+            result = subprocess.run(sanitized_command, shell=True, capture_output=True, text=True, timeout=30)
             return {
                 "success": result.returncode == 0,
                 "stdout": result.stdout,
@@ -923,6 +1047,163 @@ Respond with JSON for commands or plain text for information."""
         print("=" * 60)
         print(info)
         print("=" * 60)
+        print()
+    
+    def listen_for_voice(self, timeout=5, phrase_time_limit=10):
+        """Listen for voice input and return transcribed text"""
+        try:
+            import speech_recognition as sr
+            
+            recognizer = sr.Recognizer()
+            microphone = sr.Microphone()
+            
+            # Adjust for ambient noise
+            with microphone as source:
+                print("🎤 Adjusting for ambient noise... Please wait.")
+                recognizer.adjust_for_ambient_noise(source, duration=1)
+                print("✅ Ready! Listening...")
+            
+            # Listen for audio
+            with microphone as source:
+                try:
+                    audio = recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
+                    print("🎤 Processing voice input...")
+                    
+                    # Use Google Speech Recognition (free, no API key needed for basic usage)
+                    text = recognizer.recognize_google(audio)
+                    return text.lower()
+                except sr.WaitTimeoutError:
+                    print("⏱️  No voice input detected within timeout period.")
+                    return None
+                except sr.UnknownValueError:
+                    print("❌ Could not understand audio. Please try again.")
+                    return None
+                except sr.RequestError as e:
+                    print(f"❌ Error with speech recognition service: {e}")
+                    print("💡 Make sure you have an internet connection for Google Speech Recognition.")
+                    return None
+                    
+        except ImportError:
+            print("❌ speech_recognition module not found.")
+            print("💡 Please install it: pip3 install SpeechRecognition pyaudio")
+            return None
+        except Exception as e:
+            print(f"❌ Error listening for voice: {e}")
+            return None
+    
+    def listen_for_wake_word(self):
+        """Listen continuously for 'jarvis' wake word, then capture command"""
+        try:
+            import speech_recognition as sr
+            
+            recognizer = sr.Recognizer()
+            microphone = sr.Microphone()
+            
+            print("🎤 Voice command mode activated!")
+            print("💡 Say 'jarvis' followed by your command")
+            print("💡 Example: 'jarvis list files in this directory'")
+            print("=" * 60)
+            
+            # Adjust for ambient noise
+            with microphone as source:
+                print("🎤 Adjusting for ambient noise... Please wait.")
+                recognizer.adjust_for_ambient_noise(source, duration=1)
+                print("✅ Ready! Listening for 'jarvis'...")
+            
+            while self.running:
+                try:
+                    with microphone as source:
+                        # Listen for audio (no timeout, continuous listening)
+                        print("\n🎤 Listening... (say 'jarvis' followed by your command)")
+                        audio = recognizer.listen(source, timeout=None, phrase_time_limit=15)
+                        
+                        print("🎤 Processing voice input...")
+                        
+                        # Recognize speech
+                        try:
+                            text = recognizer.recognize_google(audio).lower()
+                            print(f"📝 Heard: {text}")
+                            
+                            # Check if "jarvis" is in the text
+                            if "jarvis" in text:
+                                # Extract command after "jarvis"
+                                parts = text.split("jarvis", 1)
+                                if len(parts) > 1:
+                                    command = parts[1].strip()
+                                    if command:
+                                        print(f"✅ Command detected: {command}")
+                                        return command
+                                    else:
+                                        print("⚠️  Heard 'jarvis' but no command followed. Please try again.")
+                                else:
+                                    print("⚠️  Heard 'jarvis' but no command followed. Please try again.")
+                            else:
+                                print(f"⚠️  Did not hear 'jarvis'. Heard: '{text}'")
+                                print("💡 Please say 'jarvis' followed by your command.")
+                                
+                        except sr.UnknownValueError:
+                            print("❌ Could not understand audio. Please try again.")
+                        except sr.RequestError as e:
+                            print(f"❌ Error with speech recognition service: {e}")
+                            print("💡 Make sure you have an internet connection.")
+                            
+                except KeyboardInterrupt:
+                    print("\n👋 Exiting voice command mode...")
+                    break
+                except Exception as e:
+                    print(f"❌ Error: {e}")
+                    time.sleep(1)
+                    
+        except ImportError:
+            print("❌ speech_recognition module not found.")
+            print("💡 Please install it: pip3 install SpeechRecognition pyaudio")
+            return None
+        except Exception as e:
+            print(f"❌ Error in voice command mode: {e}")
+            return None
+    
+    def run_voice_mode(self):
+        """Run Jarvis in voice command mode with full agentic support"""
+        self.clear_screen()
+        self.print_header()
+        print("🎤 VOICE COMMAND MODE - AGENTIC AI")
+        print("=" * 60)
+        print("💡 Say 'jarvis' followed by your command")
+        print("💡 Example: 'jarvis list files in this directory'")
+        print("💡 Example: 'jarvis check if my CPU usage is normal'")
+        print("💡 Jarvis will automatically iterate through commands until complete")
+        print("💡 Say 'quit' or press Ctrl+C to exit")
+        print("=" * 60)
+        print()
+        
+        while self.running:
+            try:
+                # Listen for wake word and command
+                command = self.listen_for_wake_word()
+                
+                if not command:
+                    continue
+                
+                if command.lower() in ['quit', 'q', 'exit', 'stop']:
+                    print("👋 Goodbye!")
+                    break
+                
+                # Process the command with full agentic support
+                print(f"\n🤖 Processing voice command: {command}")
+                print("🔄 Agentic mode: Jarvis will iterate through commands as needed...")
+                print("=" * 60)
+                self.process_query(command)
+                print("\n" + "=" * 60)
+                print("✅ Agentic flow complete. Listening for next command...")
+                print("=" * 60)
+                print()
+                
+            except KeyboardInterrupt:
+                print("\n👋 Goodbye!")
+                break
+            except Exception as e:
+                print(f"❌ Error: {e}")
+                print()
         print()
     
     def show_system_health(self):
@@ -1146,6 +1427,8 @@ def main():
                        help='Bot ID for Drona model (required when using -m drona)')
     parser.add_argument('-img', '--image', dest='image_path',
                        help='Path to image file to send with the query (supported formats: jpg, png, gif, webp, bmp)')
+    parser.add_argument('-v', '--voice', action='store_true',
+                       help='Enable voice command mode (say "jarvis" followed by your command)')
     
     args = parser.parse_args()
     
@@ -1174,8 +1457,11 @@ def main():
     print("🚀 Starting Jarvis...")
     jarvis = Jarvis(model=args.model, bot_id=args.bot_id, image_path=args.image_path)
     
+    # If voice mode enabled, start voice command mode
+    if args.voice:
+        jarvis.run_voice_mode()
     # If query provided, process it directly
-    if args.query:
+    elif args.query:
         query = ' '.join(args.query)
         jarvis.process_query(query)
     else:
