@@ -1,11 +1,20 @@
-# 🚀 Jarvis v1.3.0 - Release Notes
+# 🚀 Jarvis v1.4.0 - Release Notes
 
 ## Release Title
-**Jarvis v1.3.0: Voice Commands & Enhanced Agentic AI**
+**Jarvis v1.4.0: Security Scanning & File Sensitivity Detection**
 
 ---
 
 ## 🎉 What's New
+
+### 🔍 Security Scanning Feature (Drona Only)
+- **Folder scanning** - Scan entire folders for sensitive files
+- **AI-powered detection** - Uses Drona LLM to analyze file content for sensitive information
+- **Comprehensive analysis** - Detects API keys, credentials, PII, financial data, and more
+- **Detailed reporting** - Provides sensitivity levels, reasons, and protection recommendations
+- **Markdown content extraction** - Extracts up to 10,000 characters per file with proper structure
+- **Recursive scanning** - Automatically scans all subdirectories
+- **Progress tracking** - Shows real-time progress during scan
 
 ### ✨ Secure API Key Management
 - **No more hardcoded API keys** - All API keys are now stored securely in `~/.jarvis/config.json`
@@ -43,6 +52,121 @@
 - **SLM Configuration**: Configure server URL
 - **Drona Configuration**: Configure server URL and bot ID
 - **Persistent settings** - Configuration saved automatically and reused
+
+### 🔍 Security Scanning Feature
+
+#### Folder Scanning for Sensitive Files
+Jarvis now includes a powerful security scanning feature that uses AI to identify sensitive files in your folders. This feature is available exclusively with the Drona model.
+
+**What it detects:**
+- API keys, tokens, passwords, and credentials
+- Personal identifiable information (PII): SSN, credit cards, phone numbers, addresses
+- Financial information: bank accounts, payment details
+- Medical records and health information
+- Confidential business data: trade secrets, proprietary code, client data
+- Authentication credentials: usernames, passwords, private keys
+- Database connection strings with credentials
+- Environment variables with secrets
+- Configuration files with sensitive data
+- Source code with hardcoded secrets
+
+**Usage:**
+```bash
+# Basic scan
+jarvis -scan -f <folder_path> -m drona -b <bot_id>
+
+# With bot ID from config
+jarvis -scan -f ~/Documents/myproject -m drona
+```
+
+**Example:**
+```bash
+jarvis -scan -f ~/Documents/myproject -m drona -b my_bot_id
+```
+
+**How it works:**
+1. **File Collection**: Recursively scans all files in the specified folder (skips hidden files/directories)
+2. **Content Extraction**: For each file:
+   - Extracts up to 10,000 characters
+   - Structures content in markdown format with metadata
+   - Includes file path, size, extension, and content
+3. **AI Analysis**: Sends each file to Drona LLM for sensitivity analysis
+4. **Categorization**: LLM categorizes files as:
+   - `is_sensitive`: true or false
+   - `sensitivity_level`: high, medium, low, or none
+   - `reason`: Explanation of why the file is sensitive
+   - `recommended_protection`: Specific protection recommendations
+5. **Reporting**: Generates comprehensive report with all sensitive files
+
+**Output Format:**
+```
+🔍 Starting Folder Scan for Sensitive Files
+============================================================
+📁 Scanning folder: ~/Documents/myproject
+🤖 Using model: DRONA
+============================================================
+
+📊 Found 25 files to analyze
+
+🔍 Analyzing [1/25]: config.json
+  🔴 SENSITIVE: Contains API keys and database credentials
+🔍 Analyzing [2/25]: README.md
+  ✅ Not sensitive
+...
+
+============================================================
+📊 Scan Complete
+============================================================
+Total files analyzed: 25
+Sensitive files found: 3
+============================================================
+
+🔴 SENSITIVE FILES DETECTED
+============================================================
+
+1. 📄 config.json
+   📍 Path: ~/Documents/myproject/config.json
+   📊 Size: 1024 bytes
+   🔒 Sensitivity Level: HIGH
+   💡 Reason: Contains API keys and database connection strings
+   🛡️  Recommended Protection: Encrypt file, restrict access (chmod 600), remove from version control
+
+...
+```
+
+**Features:**
+- ✅ Recursive folder scanning (all subdirectories)
+- ✅ Skips hidden files and directories (starts with `.`)
+- ✅ Handles text and binary files gracefully
+- ✅ Progress tracking with file count
+- ✅ Detailed metadata for each file
+- ✅ AI-powered sensitivity detection
+- ✅ Multiple sensitivity levels (high/medium/low/none)
+- ✅ Specific protection recommendations
+- ✅ Comprehensive summary report
+
+**Technical Details:**
+- Content extraction limited to 10,000 characters per file
+- Markdown structure includes file metadata and content
+- Robust JSON parsing with multiple fallback strategies
+- Handles binary files that can't be decoded
+- Error handling for unreadable files
+
+**Protection Recommendations:**
+The scan provides specific recommendations such as:
+- Encrypt sensitive files
+- Restrict file access permissions (chmod 600)
+- Move sensitive files to secure locations
+- Remove sensitive data from version control
+- Use environment variables or secure vaults for secrets
+- Implement proper access controls
+
+**Requirements:**
+- Drona model (`-m drona`)
+- Bot ID (from config or command line)
+- Valid folder path
+
+**Note:** This feature is only available with the Drona model. The scan analyzes file content using AI to provide intelligent sensitivity detection beyond simple pattern matching.
 
 ### 📦 Homebrew Installation
 - **One-command installation**: `brew install dronaprod/jarvis/jarvis`
@@ -365,6 +489,10 @@ jarvis "your question" -m drona -b <bot-id>
 jarvis "what's in this image?" -img path/to/image.jpg
 jarvis "analyze this screenshot" -m drona -b <bot-id> -img screenshot.png
 
+# Scan folder for sensitive files (Drona only)
+jarvis -scan -f <folder_path> -m drona -b <bot-id>
+jarvis -scan -f ~/Documents/myproject -m drona
+
 # Voice commands
 jarvis -v                    # Voice mode with Gemini (default)
 jarvis -v -m gemini          # Voice mode with Gemini
@@ -385,6 +513,7 @@ jarvis -v -m drona -b <bot-id>  # Voice mode with Drona
 - **Agentic AI iteration** - Automatically iterates through commands until complete
 - **Image analysis** - Send images with queries for visual analysis
 - **Machine context** - Drona model receives system details and IP address automatically
+- **Security scanning** - Scan folders for sensitive files with AI-powered detection (Drona only)
 
 ### 💻 System Management
 - **System health monitoring** - CPU, memory, disk usage analysis
@@ -525,7 +654,16 @@ Built with:
 
 ## 📊 Version History
 
-### v1.3.0 (Current)
+### v1.4.0 (Current)
+- ✨ Security scanning feature for folder analysis (Drona only)
+- ✨ AI-powered sensitive file detection
+- ✨ Comprehensive sensitivity reporting with recommendations
+- ✨ Markdown-structured content extraction (max 10,000 chars per file)
+- ✨ Recursive folder scanning with progress tracking
+- 🔧 Robust JSON parsing for LLM responses
+- 📝 Detailed protection recommendations for sensitive files
+
+### v1.3.0
 - ✨ Voice command support with wake word detection
 - ✨ Hands-free operation - speak commands instead of typing
 - ✨ Enhanced agentic AI iteration for voice commands
@@ -557,7 +695,7 @@ Built with:
 ---
 
 **Download**: Available via Homebrew or GitHub Releases  
-**Version**: 1.3.0  
+**Version**: 1.4.0  
 **Release Date**: December 2024  
 **License**: MIT
 

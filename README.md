@@ -35,6 +35,10 @@ jarvis "your question" -m drona -b <bot_id>  # Use Drona model
 jarvis "what's in this image?" -img path/to/image.jpg
 jarvis "analyze this screenshot" -m drona -b <bot_id> -img screenshot.png
 
+# Scan folder for sensitive files (Drona only)
+jarvis -scan -f <folder_path> -m drona -b <bot_id>
+jarvis -scan -f ~/Documents/myproject -m drona
+
 # Voice commands
 jarvis -v                    # Voice mode with Gemini (default)
 jarvis -v -m gemini         # Voice mode with Gemini
@@ -53,6 +57,7 @@ jarvis -v -m drona -b <bot_id>  # Voice mode with Drona
 - ✅ Image support - send images with queries
 - ✅ Machine context awareness (for Drona model)
 - ✅ Voice commands - speak commands hands-free
+- ✅ Security scanning - scan folders for sensitive files (Drona only)
 
 ## 📁 Files
 
@@ -153,6 +158,61 @@ jarvis configure -m drona -b <bot-id>
 ```
 
 Configuration is saved to `~/.jarvis/config.json`
+
+## 🔍 Security Scanning (Drona Only)
+
+Jarvis can scan folders to identify sensitive files that may contain:
+- API keys, tokens, passwords, credentials
+- Personal identifiable information (PII)
+- Financial information
+- Medical records
+- Confidential business data
+- Authentication credentials
+- Database connection strings
+- Environment variables with secrets
+
+**Usage:**
+```bash
+jarvis -scan -f <folder_path> -m drona [-b <bot_id>]
+```
+
+**Example:**
+```bash
+jarvis -scan -f ~/Documents/myproject -m drona -b my_bot_id
+```
+
+**How it works:**
+1. Scans all files in the specified folder (recursively)
+2. Extracts file content (up to 10,000 characters per file) with markdown structure
+3. Sends each file to Drona LLM for sensitivity analysis
+4. Categorizes files as sensitive or not sensitive
+5. Provides detailed report with:
+   - List of sensitive files
+   - Sensitivity level (high/medium/low)
+   - Reason for classification
+   - Recommended protection measures
+
+**Features:**
+- ✅ Recursive folder scanning
+- ✅ Automatic content extraction with markdown formatting
+- ✅ AI-powered sensitivity detection
+- ✅ Detailed protection recommendations
+- ✅ Progress tracking during scan
+- ✅ Comprehensive report with actionable insights
+
+**Output:**
+The scan provides:
+- Total files analyzed
+- Number of sensitive files found
+- Detailed list of each sensitive file with:
+  - File path and name
+  - File size
+  - Sensitivity level
+  - Reason for classification
+  - Recommended protection actions
+- General security recommendations
+
+**Note:** This feature is only available with `-m drona` model.
 
 ## 🎉 Enjoy Jarvis!
 
