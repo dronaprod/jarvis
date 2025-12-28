@@ -400,6 +400,15 @@ class Jarvis:
         print("  Say 'jarvis' followed by your command")
         print("  Example: 'jarvis list files in this directory'")
         print()
+        print("🔒 Security & Monitoring:")
+        print("  jarvis -monitor network         - Monitor outbound network connections")
+        print("                                    (with desktop notifications)")
+        print("  jarvis -monitor process         - Monitor processes for threats & anomalies")
+        print("                                    (detects malware, resource abuse, file ops)")
+        print("  jarvis -monitor network -m drona -b <bot_id> - Network monitoring with AI")
+        print("  jarvis -monitor process -m drona -b <bot_id> - Process monitoring with AI")
+        print("  jarvis -scan -f <folder> -m drona - Scan folder for sensitive files")
+        print()
         print("🤖 AI Model Selection:")
         print("  jarvis 'command' -m slm     - Use SLM model (35.174.147.167:5000)")
         print("  jarvis 'command' -m gemini  - Use Gemini model (default)")
@@ -1495,6 +1504,876 @@ Respond ONLY with valid JSON, no additional text."""
         print("=" * 60)
         print()
     
+    def monitor_network(self):
+        """Monitor network connections and alert on suspicious outbound traffic"""
+        print("\n" + "=" * 80)
+        print("🌐 NETWORK MONITORING MODE - Real-time Outbound Connection Monitor")
+        print("=" * 80)
+        print(f"🤖 Using AI Model: {self.model.upper()}")
+        print(f"💻 System: {platform.system()}")
+        print("=" * 80)
+        print("📊 Monitoring outbound network connections from background applications...")
+        print("🔔 Desktop notifications will be sent for new connections")
+        print("🔍 Press Ctrl+C to stop monitoring")
+        print("=" * 80)
+        print()
+        
+        # Track known connections to detect new ones
+        known_connections = set()
+        alert_count = 0
+        
+        try:
+            import psutil
+            
+            # Initial scan to establish baseline
+            print("🔄 Establishing baseline connections...")
+            try:
+                connections = psutil.net_connections(kind='inet')
+            except psutil.AccessDenied:
+                print("\n❌ Access Denied: Network monitoring requires elevated permissions on macOS")
+                print("💡 Please run with sudo:")
+                print("   sudo python3 jarvis.py -monitor network")
+                print("   Or: sudo jarvis -monitor network")
+                print("\n⚠️  Note: Use sudo with caution and only from trusted sources")
+                return
+            
+            for conn in connections:
+                try:
+                    if conn.status == 'ESTABLISHED' and conn.raddr:
+                        # Track by (pid, remote_ip, remote_port, local_port)
+                        conn_id = (conn.pid, conn.raddr.ip, conn.raddr.port, conn.laddr.port)
+                        known_connections.add(conn_id)
+                except (AttributeError, TypeError) as e:
+                    # Skip connections with missing attributes
+                    continue
+            
+            print(f"✅ Baseline established: {len(known_connections)} active connections")
+            print("🔍 Now monitoring for NEW outbound connections...\n")
+            
+            # Continuous monitoring loop
+            iteration = 0
+            while True:
+                iteration += 1
+                time.sleep(3)  # Check every 3 seconds
+                
+                # Get current connections
+                current_connections = set()
+                new_connections = []
+                
+                try:
+                    connections = psutil.net_connections(kind='inet')
+                except psutil.AccessDenied:
+                    print("\n❌ Lost access to network connections. Monitoring stopped.")
+                    break
+                
+                for conn in connections:
+                    try:
+                        # Only monitor ESTABLISHED outbound connections
+                        if conn.status == 'ESTABLISHED' and conn.raddr:
+                            conn_id = (conn.pid, conn.raddr.ip, conn.raddr.port, conn.laddr.port)
+                            current_connections.add(conn_id)
+                            
+                            # Check if this is a new connection
+                            if conn_id not in known_connections:
+                                new_connections.append({
+                                    'pid': conn.pid,
+                                    'local_ip': conn.laddr.ip,
+                                    'local_port': conn.laddr.port,
+                                    'remote_ip': conn.raddr.ip,
+                                    'remote_port': conn.raddr.port,
+                                    'status': conn.status
+                                })
+                    except (AttributeError, TypeError) as e:
+                        # Skip connections with missing attributes
+                        continue
+                
+                # Process new connections
+                if new_connections:
+                    for new_conn in new_connections:
+                        alert_count += 1
+                        self.alert_network_activity(new_conn, alert_count)
+                
+                # Update known connections
+                known_connections = current_connections
+                
+                # Show status update every 10 iterations (30 seconds)
+                if iteration % 10 == 0:
+                    print(f"[{time.strftime('%H:%M:%S')}] 📊 Status: Monitoring... ({len(current_connections)} active connections, {alert_count} alerts raised)")
+        
+        except ImportError:
+            print("❌ psutil module not found. Please install it: pip3 install psutil")
+        except KeyboardInterrupt:
+            print("\n\n" + "=" * 80)
+            print("🛑 Network monitoring stopped by user")
+            print("=" * 80)
+            print(f"📊 Monitoring Summary:")
+            print(f"   • Total alerts raised: {alert_count}")
+            print(f"   • Active connections at stop: {len(known_connections)}")
+            print("=" * 80)
+            print()
+        except Exception as e:
+            print(f"\n❌ Error during network monitoring: {e}")
+    
+    def monitor_processes(self):
+        """Monitor processes for anomalies, threats, and suspicious behavior"""
+        print("\n" + "=" * 80)
+        print("🔍 PROCESS MONITORING MODE - Real-time Security & Anomaly Detection")
+        print("=" * 80)
+        print(f"🤖 Using AI Model: {self.model.upper()}")
+        print(f"💻 System: {platform.system()}")
+        print("=" * 80)
+        print("📊 Monitoring for:")
+        print("   • New suspicious processes")
+        print("   • Unusual CPU/Memory usage")
+        print("   • Potential threats and vulnerabilities")
+        print("   • File deletion/corruption attempts")
+        print("   • System integrity threats")
+        print("🔔 Desktop notifications will be sent for threats")
+        print("🔍 Press Ctrl+C to stop monitoring")
+        print("=" * 80)
+        print()
+        
+        # Track known processes and their baselines
+        known_processes = {}
+        alert_count = 0
+        
+        # CPU/Memory thresholds
+        HIGH_CPU_THRESHOLD = 80.0  # 80% CPU usage
+        HIGH_MEMORY_THRESHOLD = 80.0  # 80% memory usage
+        
+        try:
+            import psutil
+            
+            # Initial scan to establish baseline
+            print("🔄 Establishing process baseline...")
+            for proc in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent', 'memory_percent']):
+                try:
+                    pinfo = proc.info
+                    known_processes[pinfo['pid']] = {
+                        'name': pinfo['name'],
+                        'username': pinfo['username'],
+                        'cpu_baseline': pinfo['cpu_percent'] or 0,
+                        'mem_baseline': pinfo['memory_percent'] or 0,
+                        'first_seen': time.time()
+                    }
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
+            
+            print(f"✅ Baseline established: {len(known_processes)} processes")
+            print("🔍 Now monitoring for anomalies and threats...\n")
+            
+            # Continuous monitoring loop
+            iteration = 0
+            while True:
+                iteration += 1
+                time.sleep(5)  # Check every 5 seconds
+                
+                current_processes = {}
+                suspicious_activities = []
+                
+                try:
+                    processes = list(psutil.process_iter([
+                        'pid', 'name', 'username', 'exe', 'cmdline',
+                        'cpu_percent', 'memory_percent', 'status',
+                        'create_time', 'num_threads', 'open_files'
+                    ]))
+                except (psutil.AccessDenied, PermissionError):
+                    print("\n❌ Access Denied: Process monitoring requires elevated permissions")
+                    print("💡 Please run with sudo:")
+                    print("   sudo python3 jarvis.py -monitor process")
+                    break
+                
+                for proc in processes:
+                    try:
+                        pinfo = proc.info
+                        pid = pinfo['pid']
+                        current_processes[pid] = True
+                        
+                        # Check if this is a new process
+                        if pid not in known_processes:
+                            # Analyze new process
+                            threat_indicators = self.analyze_process_threat(pinfo)
+                            
+                            if threat_indicators['is_suspicious']:
+                                suspicious_activities.append({
+                                    'type': 'NEW_PROCESS',
+                                    'severity': threat_indicators['severity'],
+                                    'process': pinfo,
+                                    'indicators': threat_indicators
+                                })
+                            
+                            # Add to known processes
+                            known_processes[pid] = {
+                                'name': pinfo['name'],
+                                'username': pinfo['username'],
+                                'cpu_baseline': pinfo['cpu_percent'] or 0,
+                                'mem_baseline': pinfo['memory_percent'] or 0,
+                                'first_seen': time.time()
+                            }
+                        else:
+                            # Check existing process for anomalies
+                            baseline = known_processes[pid]
+                            cpu_current = pinfo['cpu_percent'] or 0
+                            mem_current = pinfo['memory_percent'] or 0
+                            
+                            # Check for CPU spike
+                            if cpu_current > HIGH_CPU_THRESHOLD:
+                                cpu_increase = cpu_current - baseline['cpu_baseline']
+                                if cpu_increase > 50:  # 50% increase
+                                    suspicious_activities.append({
+                                        'type': 'HIGH_CPU',
+                                        'severity': 'MEDIUM' if cpu_current < 95 else 'HIGH',
+                                        'process': pinfo,
+                                        'indicators': {
+                                            'cpu_current': cpu_current,
+                                            'cpu_baseline': baseline['cpu_baseline'],
+                                            'cpu_increase': cpu_increase
+                                        }
+                                    })
+                            
+                            # Check for Memory spike
+                            if mem_current > HIGH_MEMORY_THRESHOLD:
+                                mem_increase = mem_current - baseline['mem_baseline']
+                                if mem_increase > 30:  # 30% increase
+                                    suspicious_activities.append({
+                                        'type': 'HIGH_MEMORY',
+                                        'severity': 'MEDIUM' if mem_current < 95 else 'HIGH',
+                                        'process': pinfo,
+                                        'indicators': {
+                                            'mem_current': mem_current,
+                                            'mem_baseline': baseline['mem_baseline'],
+                                            'mem_increase': mem_increase
+                                        }
+                                    })
+                            
+                            # Update baseline (rolling average)
+                            baseline['cpu_baseline'] = (baseline['cpu_baseline'] * 0.7 + cpu_current * 0.3)
+                            baseline['mem_baseline'] = (baseline['mem_baseline'] * 0.7 + mem_current * 0.3)
+                        
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                        continue
+                    except Exception as e:
+                        continue
+                
+                # Process suspicious activities
+                if suspicious_activities:
+                    for activity in suspicious_activities:
+                        alert_count += 1
+                        self.alert_process_activity(activity, alert_count)
+                
+                # Clean up terminated processes from tracking
+                terminated_pids = [pid for pid in known_processes if pid not in current_processes]
+                for pid in terminated_pids:
+                    del known_processes[pid]
+                
+                # Show status update every 6 iterations (30 seconds)
+                if iteration % 6 == 0:
+                    print(f"[{time.strftime('%H:%M:%S')}] 📊 Status: Monitoring... ({len(current_processes)} processes, {alert_count} alerts raised)")
+        
+        except ImportError:
+            print("❌ psutil module not found. Please install it: pip3 install psutil")
+        except KeyboardInterrupt:
+            print("\n\n" + "=" * 80)
+            print("🛑 Process monitoring stopped by user")
+            print("=" * 80)
+            print(f"📊 Monitoring Summary:")
+            print(f"   • Total alerts raised: {alert_count}")
+            print(f"   • Processes monitored: {len(known_processes)}")
+            print("=" * 80)
+            print()
+        except Exception as e:
+            print(f"\n❌ Error during process monitoring: {e}")
+    
+    def analyze_process_threat(self, pinfo):
+        """Analyze a process for potential threats"""
+        indicators = {
+            'is_suspicious': False,
+            'severity': 'LOW',
+            'reasons': []
+        }
+        
+        try:
+            name = pinfo.get('name', 'Unknown')
+            exe = pinfo.get('exe', '')
+            cmdline = pinfo.get('cmdline', [])
+            username = pinfo.get('username', '')
+            cpu_percent = pinfo.get('cpu_percent', 0) or 0
+            mem_percent = pinfo.get('memory_percent', 0) or 0
+            
+            # Check for suspicious executable paths
+            suspicious_paths = ['/tmp/', '/var/tmp/', '/dev/shm/', '~/Downloads/']
+            if exe:
+                for susp_path in suspicious_paths:
+                    if susp_path in exe:
+                        indicators['is_suspicious'] = True
+                        indicators['severity'] = 'HIGH'
+                        indicators['reasons'].append(f"Running from suspicious location: {susp_path}")
+            
+            # Check for suspicious names
+            suspicious_names = [
+                'keylog', 'hack', 'crack', 'exploit', 'malware',
+                'backdoor', 'trojan', 'ransom', 'miner', 'cryptominer'
+            ]
+            name_lower = name.lower()
+            for susp_name in suspicious_names:
+                if susp_name in name_lower:
+                    indicators['is_suspicious'] = True
+                    indicators['severity'] = 'CRITICAL'
+                    indicators['reasons'].append(f"Suspicious process name contains: {susp_name}")
+            
+            # Check for hidden processes (starting with .)
+            if name.startswith('.') and len(name) > 1:
+                indicators['is_suspicious'] = True
+                indicators['severity'] = 'MEDIUM'
+                indicators['reasons'].append("Hidden process (starts with .)")
+            
+            # Check for processes with random/gibberish names
+            if len(name) > 15 and not any(c.isspace() for c in name):
+                # Check if name is mostly random characters
+                consonant_clusters = 0
+                for i in range(len(name) - 2):
+                    if name[i:i+3].lower().translate(str.maketrans('', '', 'aeiou')) == name[i:i+3].lower():
+                        consonant_clusters += 1
+                
+                if consonant_clusters > len(name) / 4:
+                    indicators['is_suspicious'] = True
+                    indicators['severity'] = 'MEDIUM'
+                    indicators['reasons'].append("Process name appears randomly generated")
+            
+            # Check command line for suspicious flags
+            if cmdline:
+                cmdline_str = ' '.join(cmdline).lower()
+                suspicious_flags = [
+                    'rm -rf', 'dd if=', '/dev/null', 'chmod 777', 'curl | bash',
+                    'wget | sh', 'base64 -d', 'eval(', 'exec(', '--no-sandbox'
+                ]
+                for flag in suspicious_flags:
+                    if flag in cmdline_str:
+                        indicators['is_suspicious'] = True
+                        indicators['severity'] = 'HIGH'
+                        indicators['reasons'].append(f"Suspicious command: {flag}")
+            
+            # Check for high resource usage on startup
+            if cpu_percent > 80 or mem_percent > 50:
+                indicators['is_suspicious'] = True
+                indicators['severity'] = 'MEDIUM'
+                indicators['reasons'].append(f"High resource usage: CPU {cpu_percent:.1f}%, Memory {mem_percent:.1f}%")
+            
+            # Check for root/system processes running as regular user
+            system_process_names = ['kernel', 'system', 'root', 'admin']
+            if any(sys_name in name_lower for sys_name in system_process_names):
+                if username and username != 'root' and username != '_system':
+                    indicators['is_suspicious'] = True
+                    indicators['severity'] = 'HIGH'
+                    indicators['reasons'].append(f"System-named process running as regular user: {username}")
+            
+        except Exception as e:
+            pass
+        
+        return indicators
+    
+    def alert_process_activity(self, activity, alert_num):
+        """Alert on suspicious process activity"""
+        print("\n" + "🚨" * 40)
+        print(f"🔴 ALERT #{alert_num} - SUSPICIOUS PROCESS ACTIVITY DETECTED")
+        print("🚨" * 40)
+        print(f"⏰ Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"⚠️  Activity Type: {activity['type']}")
+        print(f"⚠️  Severity: {activity['severity']}")
+        print("-" * 80)
+        
+        pinfo = activity['process']
+        indicators = activity['indicators']
+        
+        # Get process details
+        pid = pinfo.get('pid', 'N/A')
+        name = pinfo.get('name', 'Unknown')
+        exe = pinfo.get('exe', 'Unknown')
+        username = pinfo.get('username', 'Unknown')
+        cmdline = pinfo.get('cmdline', [])
+        cmdline_str = ' '.join(cmdline) if cmdline else 'N/A'
+        cpu_percent = pinfo.get('cpu_percent', 0) or 0
+        mem_percent = pinfo.get('memory_percent', 0) or 0
+        num_threads = pinfo.get('num_threads', 0)
+        
+        # Display process details
+        print(f"📍 Process Details:")
+        print(f"   • Process ID (PID): {pid}")
+        print(f"   • Process Name: {name}")
+        print(f"   • Executable Path: {exe}")
+        print(f"   • User: {username}")
+        if len(cmdline_str) > 0 and cmdline_str != 'N/A':
+            print(f"   • Command: {cmdline_str[:150]}{'...' if len(cmdline_str) > 150 else ''}")
+        print()
+        print(f"📊 Resource Usage:")
+        print(f"   • CPU: {cpu_percent:.1f}%")
+        print(f"   • Memory: {mem_percent:.1f}%")
+        print(f"   • Threads: {num_threads}")
+        print()
+        
+        # Display threat indicators
+        if activity['type'] == 'NEW_PROCESS':
+            print(f"🔍 Threat Analysis:")
+            reasons = indicators.get('reasons', [])
+            if reasons:
+                for reason in reasons:
+                    print(f"   • {reason}")
+        elif activity['type'] == 'HIGH_CPU':
+            print(f"⚠️  CPU Usage Anomaly:")
+            print(f"   • Current: {indicators['cpu_current']:.1f}%")
+            print(f"   • Baseline: {indicators['cpu_baseline']:.1f}%")
+            print(f"   • Increase: +{indicators['cpu_increase']:.1f}%")
+        elif activity['type'] == 'HIGH_MEMORY':
+            print(f"⚠️  Memory Usage Anomaly:")
+            print(f"   • Current: {indicators['mem_current']:.1f}%")
+            print(f"   • Baseline: {indicators['mem_baseline']:.1f}%")
+            print(f"   • Increase: +{indicators['mem_increase']:.1f}%")
+        
+        print("-" * 80)
+        
+        # AI-based threat analysis if model is available
+        threat_assessment = None
+        if self.ai_available and activity['type'] == 'NEW_PROCESS':
+            print("🤖 AI Analysis: Analyzing process for threats...")
+            threat_assessment = self.analyze_process_with_ai(pinfo, indicators)
+            
+            if threat_assessment:
+                print(f"⚠️  AI Threat Assessment: {threat_assessment.get('level', 'UNKNOWN').upper()}")
+                print(f"💡 Analysis: {threat_assessment.get('analysis', 'No analysis available')}")
+                if threat_assessment.get('recommendations'):
+                    print(f"🛡️  Recommendations: {threat_assessment.get('recommendations', 'No recommendations')}")
+        
+        print("🚨" * 40)
+        print()
+        
+        # Send desktop notification
+        notification_title = f"{activity['severity']} Process Alert #{alert_num}"
+        if activity['type'] == 'NEW_PROCESS':
+            notification_message = f"Suspicious process: {name} | {', '.join(indicators.get('reasons', [])[:1])}"
+        elif activity['type'] == 'HIGH_CPU':
+            notification_message = f"{name} using {indicators['cpu_current']:.0f}% CPU"
+        elif activity['type'] == 'HIGH_MEMORY':
+            notification_message = f"{name} using {indicators['mem_current']:.0f}% Memory"
+        else:
+            notification_message = f"{name} - {activity['type']}"
+        
+        self.send_system_notification(notification_title, notification_message, debug=True)
+        
+        # Send enhanced notification for HIGH/CRITICAL threats
+        if activity['severity'] in ['HIGH', 'CRITICAL']:
+            enhanced_title = f"{activity['severity']} THREAT - {activity['type']}"
+            enhanced_message = f"{name} (PID {pid}) | {username} | Check terminal for details"
+            self.send_system_notification(enhanced_title, enhanced_message, debug=True)
+    
+    def analyze_process_with_ai(self, pinfo, indicators):
+        """Use AI to analyze process threat level"""
+        try:
+            pid = pinfo.get('pid', 'N/A')
+            name = pinfo.get('name', 'Unknown')
+            exe = pinfo.get('exe', 'Unknown')
+            username = pinfo.get('username', 'Unknown')
+            cmdline = pinfo.get('cmdline', [])
+            cmdline_str = ' '.join(cmdline) if cmdline else 'N/A'
+            cpu_percent = pinfo.get('cpu_percent', 0) or 0
+            mem_percent = pinfo.get('memory_percent', 0) or 0
+            
+            reasons = indicators.get('reasons', [])
+            reasons_str = ', '.join(reasons) if reasons else 'None'
+            
+            prompt = f"""You are a cybersecurity expert analyzing a potentially suspicious process.
+
+PROCESS INFORMATION:
+- Process Name: {name}
+- PID: {pid}
+- Executable Path: {exe}
+- User: {username}
+- Command Line: {cmdline_str}
+- CPU Usage: {cpu_percent:.1f}%
+- Memory Usage: {mem_percent:.1f}%
+
+THREAT INDICATORS DETECTED:
+{reasons_str}
+
+TASK: Analyze this process and assess if it's malicious, suspicious, or benign.
+
+Consider:
+1. Is this a known legitimate process or potentially malicious?
+2. Are the resource usage patterns normal?
+3. Is the executable path typical for this process?
+4. Are there red flags in the command line?
+5. Could this be malware, ransomware, cryptominer, or other threat?
+6. Could this be attempting file deletion, corruption, or system compromise?
+
+RESPONSE FORMAT (JSON only):
+{{
+    "level": "LOW" or "MEDIUM" or "HIGH" or "CRITICAL",
+    "analysis": "Brief analysis explaining the threat assessment",
+    "recommendations": "Specific recommendations (Allow, Monitor, Investigate, Terminate, Block)",
+    "is_malicious": true or false,
+    "threat_type": "none/malware/ransomware/cryptominer/backdoor/keylogger/other"
+}}
+
+Respond ONLY with valid JSON, no additional text."""
+
+            # Get AI response based on model
+            response_text = None
+            if self.model == 'slm':
+                response_text = self.query_slm(prompt)
+            elif self.model == 'drona':
+                response_text = self.query_drona(prompt)
+            elif self.model == 'gemini':
+                response = self.ai_model.generate_content(prompt)
+                response_text = response.text.strip()
+            
+            if not response_text:
+                return None
+            
+            # Parse JSON response
+            json_match = re.search(r'```json\s*(\{.*?\})\s*```', response_text, re.DOTALL)
+            if json_match:
+                try:
+                    return json.loads(json_match.group(1))
+                except json.JSONDecodeError:
+                    pass
+            
+            # Try to find JSON object
+            brace_start = response_text.find('{')
+            if brace_start != -1:
+                brace_count = 0
+                brace_end = -1
+                for i in range(brace_start, len(response_text)):
+                    if response_text[i] == '{':
+                        brace_count += 1
+                    elif response_text[i] == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            brace_end = i + 1
+                            break
+                
+                if brace_end > brace_start:
+                    try:
+                        json_str = response_text[brace_start:brace_end]
+                        result = json.loads(json_str)
+                        if "level" in result:
+                            return result
+                    except json.JSONDecodeError:
+                        pass
+            
+            # Try to parse entire response
+            try:
+                result = json.loads(response_text.strip())
+                if isinstance(result, dict) and "level" in result:
+                    return result
+            except json.JSONDecodeError:
+                pass
+            
+            return {
+                "level": "UNKNOWN",
+                "analysis": response_text[:200] if response_text else "Unable to analyze",
+                "recommendations": "Manual review recommended",
+                "is_malicious": False,
+                "threat_type": "unknown"
+            }
+        except Exception as e:
+            print(f"⚠️  Error analyzing with AI: {e}")
+            return None
+    
+    def send_system_notification(self, title, message, debug=False):
+        """Send system notification based on OS"""
+        try:
+            system = platform.system()
+            
+            # Escape special characters for safe display
+            # Remove or escape problematic characters
+            title = str(title).replace('"', "'").replace('\\', '').replace('\n', ' ')[:100]
+            message = str(message).replace('"', "'").replace('\\', '').replace('\n', ' ')[:200]
+            
+            if system == "Darwin":  # macOS
+                # Use osascript (built-in, no dependencies needed)
+                script = f'display notification "{message}" with title "{title}" sound name "Ping"'
+                result = subprocess.run(['osascript', '-e', script], 
+                                      capture_output=True, 
+                                      text=True,
+                                      timeout=2)
+                
+                if debug or result.returncode != 0:
+                    if result.returncode != 0:
+                        print(f"⚠️  Notification error (code {result.returncode}): {result.stderr}")
+                    else:
+                        print(f"✅ Notification sent: {title}")
+            
+            elif system == "Linux":
+                # Use notify-send (usually pre-installed on most Linux distros)
+                result = subprocess.run(['notify-send', title, message], 
+                                      capture_output=True, 
+                                      text=True,
+                                      timeout=2)
+                
+                if debug or result.returncode != 0:
+                    if result.returncode != 0:
+                        print(f"⚠️  Notification error: {result.stderr}")
+                    else:
+                        print(f"✅ Notification sent: {title}")
+            
+            elif system == "Windows":
+                # Use PowerShell for Windows notifications
+                ps_script = f'''
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
+$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+$toastXml = [xml] $template.GetXml()
+$toastXml.GetElementsByTagName("text")[0].AppendChild($toastXml.CreateTextNode("{title}")) > $null
+$toastXml.GetElementsByTagName("text")[1].AppendChild($toastXml.CreateTextNode("{message}")) > $null
+$xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+$xml.LoadXml($toastXml.OuterXml)
+$toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Jarvis Network Monitor").Show($toast)
+'''
+                result = subprocess.run(['powershell', '-Command', ps_script], 
+                                      capture_output=True, 
+                                      text=True,
+                                      timeout=2)
+                
+                if debug or result.returncode != 0:
+                    if result.returncode != 0:
+                        print(f"⚠️  Notification error: {result.stderr}")
+                    else:
+                        print(f"✅ Notification sent: {title}")
+                        
+        except subprocess.TimeoutExpired:
+            if debug:
+                print("⚠️  Notification timeout - took too long to send")
+        except FileNotFoundError as e:
+            if debug:
+                print(f"⚠️  Notification system not found: {e}")
+        except Exception as e:
+            if debug:
+                print(f"⚠️  Notification error: {e}")
+    
+    def alert_network_activity(self, connection, alert_num):
+        """Alert on new network activity and analyze if suspicious"""
+        print("\n" + "🚨" * 40)
+        print(f"🔴 ALERT #{alert_num} - NEW OUTBOUND CONNECTION DETECTED")
+        print("🚨" * 40)
+        print(f"⏰ Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        print("-" * 80)
+        
+        # Get process information
+        process_name = "Unknown"
+        process_exe = "Unknown"
+        process_cmdline = "Unknown"
+        process_user = "Unknown"
+        
+        try:
+            import psutil
+            
+            if connection['pid'] and connection['pid'] > 0:
+                try:
+                    proc = psutil.Process(connection['pid'])
+                    process_name = proc.name()
+                    process_exe = proc.exe()
+                    process_cmdline = ' '.join(proc.cmdline()) if proc.cmdline() else "N/A"
+                    process_user = proc.username()
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    process_name = f"Process {connection['pid']} (no access or terminated)"
+                except Exception as e:
+                    process_name = f"Process {connection['pid']} (error: {str(e)[:50]})"
+        except ImportError:
+            pass
+        
+        # Send system notification
+        notification_title = f"Network Alert #{alert_num}"
+        notification_message = f"{process_name} connected to {connection['remote_ip']}:{connection['remote_port']}"
+        self.send_system_notification(notification_title, notification_message, debug=True)
+        
+        # Display connection details
+        print(f"📍 Connection Details:")
+        print(f"   • Process ID (PID): {connection['pid'] if connection['pid'] else 'N/A (kernel or system connection)'}")
+        print(f"   • Process Name: {process_name}")
+        print(f"   • Process Path: {process_exe}")
+        print(f"   • Process User: {process_user}")
+        if process_cmdline and len(process_cmdline) > 0:
+            print(f"   • Command Line: {process_cmdline[:100]}{'...' if len(process_cmdline) > 100 else ''}")
+        else:
+            print(f"   • Command Line: N/A")
+        print()
+        print(f"🌐 Network Details:")
+        print(f"   • Local Address: {connection['local_ip']}:{connection['local_port']}")
+        print(f"   • Remote Address: {connection['remote_ip']}:{connection['remote_port']}")
+        print(f"   • Connection Status: {connection['status']}")
+        print()
+        
+        # Try to get geographic location of remote IP (using DNS or simple check)
+        remote_info = self.analyze_remote_ip(connection['remote_ip'])
+        if remote_info:
+            print(f"🔍 Remote IP Analysis:")
+            print(f"   • IP Address: {remote_info['ip']}")
+            print(f"   • Type: {remote_info['type']}")
+            if remote_info.get('hostname'):
+                print(f"   • Hostname: {remote_info['hostname']}")
+        
+        print("-" * 80)
+        
+        # AI-based threat analysis if model is available
+        threat_level_str = "UNKNOWN"
+        if self.ai_available:
+            print("🤖 AI Analysis: Analyzing connection for suspicious activity...")
+            threat_level = self.analyze_connection_threat(connection, process_name, process_exe, process_cmdline, remote_info)
+            
+            if threat_level:
+                threat_level_str = threat_level.get('level', 'UNKNOWN').upper()
+                print(f"⚠️  Threat Assessment: {threat_level_str}")
+                print(f"💡 Analysis: {threat_level.get('analysis', 'No analysis available')}")
+                if threat_level.get('recommendations'):
+                    print(f"🛡️  Recommendations: {threat_level.get('recommendations', 'No recommendations')}")
+                
+                # Send enhanced notification with threat level
+                if threat_level_str in ['HIGH', 'CRITICAL']:
+                    enhanced_title = f"{threat_level_str} THREAT - Alert #{alert_num}"
+                    enhanced_message = f"{process_name} to {connection['remote_ip']} | {threat_level.get('analysis', '')[:100]}"
+                    self.send_system_notification(enhanced_title, enhanced_message, debug=True)
+        
+        print("🚨" * 40)
+        print()
+    
+    def analyze_remote_ip(self, ip_address):
+        """Analyze remote IP address to determine if it's suspicious"""
+        try:
+            import socket
+            
+            # Check if it's a private IP
+            ip_parts = ip_address.split('.')
+            if len(ip_parts) == 4:
+                first_octet = int(ip_parts[0])
+                second_octet = int(ip_parts[1])
+                
+                # Private IP ranges
+                if (first_octet == 10 or 
+                    (first_octet == 172 and 16 <= second_octet <= 31) or
+                    (first_octet == 192 and second_octet == 168) or
+                    first_octet == 127):
+                    return {
+                        'ip': ip_address,
+                        'type': 'Private/Local Network',
+                        'hostname': None
+                    }
+            
+            # Try to get hostname
+            try:
+                hostname = socket.gethostbyaddr(ip_address)[0]
+            except:
+                hostname = None
+            
+            return {
+                'ip': ip_address,
+                'type': 'Public Internet',
+                'hostname': hostname
+            }
+        except Exception as e:
+            return {
+                'ip': ip_address,
+                'type': 'Unknown',
+                'hostname': None
+            }
+    
+    def analyze_connection_threat(self, connection, process_name, process_exe, process_cmdline, remote_info):
+        """Use AI to analyze if connection is potentially threatening"""
+        try:
+            # Build analysis prompt
+            prompt = f"""You are a cybersecurity expert analyzing network connections for potential threats.
+            
+CONNECTION DETAILS:
+- Process Name: {process_name}
+- Process Path: {process_exe}
+- Process PID: {connection['pid']}
+- Command Line: {process_cmdline}
+- Local Address: {connection['local_ip']}:{connection['local_port']}
+- Remote Address: {connection['remote_ip']}:{connection['remote_port']}
+- Remote IP Type: {remote_info.get('type', 'Unknown') if remote_info else 'Unknown'}
+- Remote Hostname: {remote_info.get('hostname', 'N/A') if remote_info else 'N/A'}
+
+TASK: Analyze this outbound network connection and assess if it's suspicious or potentially malicious.
+
+Consider:
+1. Is this a known legitimate application?
+2. Is the remote IP/hostname suspicious?
+3. Is the port number commonly used for malicious activity?
+4. Is the process path typical for this application?
+5. Are there any red flags in the command line arguments?
+
+RESPONSE FORMAT (JSON only):
+{{
+    "level": "LOW" or "MEDIUM" or "HIGH" or "CRITICAL",
+    "analysis": "Brief analysis explaining the threat level assessment",
+    "recommendations": "Specific recommendations for the user (e.g., 'Allow - this is normal Chrome activity', 'Investigate - unusual port for this application', 'Block immediately - known malicious pattern')",
+    "is_suspicious": true or false
+}}
+
+Respond ONLY with valid JSON, no additional text."""
+
+            # Get AI response based on model
+            response_text = None
+            if self.model == 'slm':
+                response_text = self.query_slm(prompt)
+            elif self.model == 'drona':
+                response_text = self.query_drona(prompt)
+            elif self.model == 'gemini':
+                response = self.ai_model.generate_content(prompt)
+                response_text = response.text.strip()
+            
+            if not response_text:
+                return None
+            
+            # Parse JSON response
+            # Try to extract JSON from response
+            json_match = re.search(r'```json\s*(\{.*?\})\s*```', response_text, re.DOTALL)
+            if json_match:
+                try:
+                    return json.loads(json_match.group(1))
+                except json.JSONDecodeError:
+                    pass
+            
+            # Try to find JSON object with balanced braces
+            brace_start = response_text.find('{')
+            if brace_start != -1:
+                brace_count = 0
+                brace_end = -1
+                for i in range(brace_start, len(response_text)):
+                    if response_text[i] == '{':
+                        brace_count += 1
+                    elif response_text[i] == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            brace_end = i + 1
+                            break
+                
+                if brace_end > brace_start:
+                    try:
+                        json_str = response_text[brace_start:brace_end]
+                        result = json.loads(json_str)
+                        if "level" in result:
+                            return result
+                    except json.JSONDecodeError:
+                        pass
+            
+            # Try to parse entire response as JSON
+            try:
+                result = json.loads(response_text.strip())
+                if isinstance(result, dict) and "level" in result:
+                    return result
+            except json.JSONDecodeError:
+                pass
+            
+            # If parsing fails, return basic analysis
+            return {
+                "level": "UNKNOWN",
+                "analysis": response_text[:200] if response_text else "Unable to analyze",
+                "recommendations": "Manual review recommended",
+                "is_suspicious": False
+            }
+        except Exception as e:
+            print(f"⚠️  Error analyzing threat: {e}")
+            return None
+    
     def show_system_health(self):
         """Show comprehensive system health analysis"""
         print("\n" + "=" * 60)
@@ -1722,6 +2601,8 @@ def main():
                        help='Scan folder for sensitive files (requires -m drona)')
     parser.add_argument('-f', '--folder', dest='folder_path',
                        help='Folder path to scan (required with -scan)')
+    parser.add_argument('-monitor', '--monitor', dest='monitor_type',
+                       help='Monitor system activity (network, process, cpu, memory, disk)')
     
     args = parser.parse_args()
     
@@ -1761,8 +2642,21 @@ def main():
     print("🚀 Starting Jarvis...")
     jarvis = Jarvis(model=args.model, bot_id=args.bot_id, image_path=args.image_path)
     
+    # If monitor mode enabled, run monitoring
+    if args.monitor_type:
+        monitor_type = args.monitor_type.lower()
+        if monitor_type == 'network':
+            jarvis.monitor_network()
+        elif monitor_type == 'process' or monitor_type == 'processes':
+            jarvis.monitor_processes()
+        else:
+            print(f"❌ Unknown monitor type: {monitor_type}")
+            print("💡 Supported monitor types: network, process")
+            print("💡 Usage: jarvis -monitor network")
+            print("💡 Usage: jarvis -monitor process")
+            sys.exit(1)
     # If scan mode enabled, run scan
-    if args.scan:
+    elif args.scan:
         jarvis.scan_folder(args.folder_path)
     # If voice mode enabled, start voice command mode
     elif args.voice:
