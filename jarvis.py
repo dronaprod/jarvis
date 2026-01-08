@@ -2505,7 +2505,7 @@ Respond ONLY with valid JSON, no additional text."""
                 print(f"❌ Error: {e}")
                 print()
 
-def configure_api_key(model, api_key=None, model_name=None, slm_url=None, drona_url=None, bot_id=None):
+def configure_api_key(model, api_key=None, model_name=None, slm_url=None, drona_url=None, bot_id=None, set_default=False):
     """Configure settings for a model"""
     config = load_config()
     
@@ -2520,6 +2520,9 @@ def configure_api_key(model, api_key=None, model_name=None, slm_url=None, drona_
         else:
             # Default model name if not specified
             config['gemini_model_name'] = 'gemini-2.5-flash'
+        if set_default:
+            config['default_model'] = 'gemini'
+            print(f"✅ Gemini set as default model")
         save_config(config)
         print(f"✅ Gemini API key configured successfully")
         if model_name:
@@ -2532,6 +2535,9 @@ def configure_api_key(model, api_key=None, model_name=None, slm_url=None, drona_
             print("❌ Example: jarvis configure -m slm --url http://35.174.147.167:5000")
             sys.exit(1)
         config['slm_url'] = slm_url
+        if set_default:
+            config['default_model'] = 'slm'
+            print(f"✅ SLM set as default model")
         save_config(config)
         print(f"✅ SLM server URL configured successfully")
         print(f"✅ Server URL set to: {slm_url}")
@@ -2549,6 +2555,9 @@ def configure_api_key(model, api_key=None, model_name=None, slm_url=None, drona_
             print("❌ Example: jarvis configure -m drona --url http://35.174.147.167:5000 -b <bot-id>")
             sys.exit(1)
         
+        if set_default:
+            config['default_model'] = 'drona'
+            print(f"✅ Drona set as default model")
         save_config(config)
         if drona_url:
             print(f"✅ Drona server URL configured successfully")
@@ -2557,6 +2566,8 @@ def configure_api_key(model, api_key=None, model_name=None, slm_url=None, drona_
             print(f"✅ Drona bot ID configured successfully")
             print(f"✅ Bot ID set to: {bot_id}")
         print("💡 You can now use jarvis with: jarvis 'your question' -m drona [-b <bot_id>]")
+        if not set_default and bot_id:
+            print("💡 Tip: Add --set-default to make Drona the default model")
     else:
         print(f"❌ Unknown model: {model}")
         print("❌ Supported models: 'gemini', 'slm', 'drona'")
@@ -2577,20 +2588,27 @@ def main():
                           help='Server URL for SLM or Drona model (e.g., http://35.174.147.167:5000)')
         parser.add_argument('-b', '--bot-id', dest='bot_id',
                           help='Bot ID for Drona model')
+        parser.add_argument('--set-default', dest='set_default', action='store_true',
+                          help='Set this model as the default model')
         args = parser.parse_args()
         
         # Handle URL argument for both SLM and Drona
         slm_url = args.url if args.model == 'slm' else None
         drona_url = args.url if args.model == 'drona' else None
         
-        configure_api_key(args.model, args.api_key, args.model_name, slm_url, drona_url, args.bot_id)
+        configure_api_key(args.model, args.api_key, args.model_name, slm_url, drona_url, args.bot_id, args.set_default)
         return
     
     # Regular jarvis usage
     parser = argparse.ArgumentParser(description='Jarvis - Global Terminal AI Copilot')
     parser.add_argument('query', nargs='*', help='Query to ask Jarvis')
-    parser.add_argument('-m', '--model', choices=['slm', 'gemini', 'drona'], default='gemini', 
-                       help='AI model to use (default: gemini)')
+    
+    # Get default model from config, fallback to 'gemini'
+    config = load_config()
+    default_model = config.get('default_model', 'gemini')
+    
+    parser.add_argument('-m', '--model', choices=['slm', 'gemini', 'drona'], default=default_model, 
+                       help=f'AI model to use (default: {default_model} from config, or gemini)')
     parser.add_argument('-b', '--bot-id', dest='bot_id',
                        help='Bot ID for Drona model (required when using -m drona)')
     parser.add_argument('-img', '--image', dest='image_path',
