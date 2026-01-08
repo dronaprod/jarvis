@@ -27,9 +27,13 @@ jarvis "check system health"
 jarvis "show running processes"
 
 # Use different AI models
-jarvis "your question" -m gemini    # Use Gemini (default)
+jarvis "your question" -m gemini    # Use Gemini
 jarvis "your question" -m slm       # Use SLM server
 jarvis "your question" -m drona -b <bot_id>  # Use Drona model
+
+# After setting default model (v1.5.1+):
+jarvis "your question"              # Uses your default model
+jarvis configure -m drona -b <bot_id> --set-default  # Set Drona as default
 
 # Send images with queries
 jarvis "what's in this image?" -img path/to/image.jpg
@@ -166,6 +170,41 @@ jarvis configure -m drona --url <server-url> [-b <bot-id>]
 # Or configure bot ID only:
 jarvis configure -m drona -b <bot-id>
 ```
+
+### Set Default Model (NEW in v1.5.1!)
+Set your preferred AI model as default so you don't need to specify `-m` flag every time:
+
+```bash
+# Set Drona as default (recommended for security features)
+jarvis configure -m drona -b <your-bot-id> --set-default
+
+# Set Gemini as default
+jarvis configure -m gemini --api-key <your-api-key> --set-default
+
+# Set SLM as default
+jarvis configure -m slm --url <server-url> --set-default
+```
+
+**After setting default:**
+```bash
+# Before (had to specify model):
+jarvis "your question" -m drona -b <bot-id>
+jarvis -monitor network -m drona -b <bot-id>
+
+# After (default model used automatically):
+jarvis "your question"                    # Uses default model
+jarvis -monitor network                   # Uses default model
+jarvis -monitor process                   # Uses default model
+
+# Still can override if needed:
+jarvis "your question" -m gemini         # Override to use Gemini
+```
+
+**Benefits:**
+- ✅ Simplified commands - No need to type `-m drona -b <bot-id>` every time
+- ✅ Works with all features (monitoring, scanning, voice, etc.)
+- ✅ Easy to change default model anytime
+- ✅ Backward compatible - Still supports explicit model selection
 
 Configuration is saved to `~/.jarvis/config.json`
 

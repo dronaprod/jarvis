@@ -1,11 +1,20 @@
-# 🚀 Jarvis v1.5.0 - Release Notes
+# 🚀 Jarvis v1.5.1 - Release Notes
 
 ## Release Title
-**Jarvis v1.5.0: Network Monitoring & Real-time Security Alerts**
+**Jarvis v1.5.1: Default Model Configuration & Enhanced Security Monitoring**
 
 ---
 
 ## 🎉 What's New
+
+### ⚙️ Default Model Configuration (NEW!)
+- **Set default AI model** - Configure your preferred model (Gemini, SLM, or Drona) as default
+- **Simplified usage** - No need to specify `-m` flag after configuration
+- **Persistent settings** - Default model saved in config file
+- **Easy switching** - Change default model anytime with `--set-default` flag
+- **Backward compatible** - Still supports explicit model selection with `-m` flag
+
+## 🎉 Previous Features (v1.5.0)
 
 ### 🔍 Process Monitoring with AI Security Analysis (NEW!)
 - **Real-time process monitoring** - Monitor all running processes for threats and anomalies
@@ -77,6 +86,70 @@
 - **SLM Configuration**: Configure server URL
 - **Drona Configuration**: Configure server URL and bot ID
 - **Persistent settings** - Configuration saved automatically and reused
+- **Default model selection** - Set your preferred model as default with `--set-default` flag
+
+### ⚙️ Default Model Configuration Feature
+
+#### Set Your Preferred AI Model as Default
+Jarvis now supports setting a default AI model, so you don't need to specify `-m` flag every time. This makes using your preferred model (especially Drona) much more convenient.
+
+**Usage:**
+```bash
+# Configure Drona and set as default (recommended)
+jarvis configure -m drona -b <your-bot-id> --set-default
+
+# Configure Gemini and set as default
+jarvis configure -m gemini --api-key <your-api-key> --set-default
+
+# Configure SLM and set as default
+jarvis configure -m slm --url <server-url> --set-default
+```
+
+**Examples:**
+```bash
+# Set Drona as default
+jarvis configure -m drona -b my_bot_id_123 --set-default
+
+# After configuration, use without -m flag
+jarvis "your question"                    # Uses Drona (default)
+jarvis -monitor network                   # Uses Drona (default)
+jarvis -monitor process                   # Uses Drona (default)
+
+# Still can override with -m flag
+jarvis "your question" -m gemini         # Uses Gemini (override)
+```
+
+**Benefits:**
+- ✅ **Simplified commands** - No need to type `-m drona -b <bot-id>` every time
+- ✅ **Persistent settings** - Default model saved in `~/.jarvis/config.json`
+- ✅ **Easy switching** - Change default model anytime
+- ✅ **Backward compatible** - Still supports explicit model selection
+- ✅ **Works with all features** - Monitoring, scanning, voice commands, etc.
+
+**Configuration File:**
+The default model is stored in `~/.jarvis/config.json`:
+```json
+{
+  "default_model": "drona",
+  "drona_bot_id": "your-bot-id",
+  "drona_url": "https://api.vtorlabs.com/drona/v1/jarvis/chat"
+}
+```
+
+**Changing Default Model:**
+```bash
+# Switch to Gemini as default
+jarvis configure -m gemini --set-default
+
+# Switch back to Drona
+jarvis configure -m drona --set-default
+```
+
+**Verification:**
+Check your current default model:
+```bash
+cat ~/.jarvis/config.json | grep default_model
+```
 
 ### 🌐 Network Monitoring Feature
 
@@ -690,6 +763,18 @@ jarvis configure -m drona -b "your-bot-id"
 jarvis configure -m drona --url "https://api.vtorlabs.com/drona/v1/jarvis/chat" -b "your-bot-id"
 ```
 
+**Set Default Model (NEW in v1.5.1!):**
+```bash
+# Set Drona as default (recommended for security features)
+jarvis configure -m drona -b "your-bot-id" --set-default
+
+# Set Gemini as default
+jarvis configure -m gemini --api-key "your-api-key" --set-default
+
+# Set SLM as default
+jarvis configure -m slm --url "http://your-slm-server:5000" --set-default
+```
+
 ### 3. Usage
 
 ```bash
@@ -703,6 +788,11 @@ jarvis
 jarvis "your question" -m gemini
 jarvis "your question" -m slm
 jarvis "your question" -m drona -b <bot-id>
+
+# With default model set (v1.5.1+):
+jarvis "your question"              # Uses default model automatically
+jarvis -monitor network             # Uses default model
+jarvis -monitor process             # Uses default model
 
 # Send image with query
 jarvis "what's in this image?" -img path/to/image.jpg
@@ -882,7 +972,14 @@ Built with:
 
 ## 📊 Version History
 
-### v1.5.0 (Current)
+### v1.5.1 (Current)
+- ✨ **Default model configuration** - Set preferred AI model as default
+- ✨ **Simplified command usage** - No need to specify `-m` flag after configuration
+- ✨ **Persistent default settings** - Default model saved in config file
+- 🔧 **Easy model switching** - Change default with `--set-default` flag
+- 🔧 **Backward compatible** - Still supports explicit model selection
+
+### v1.5.0
 - ✨ **Process monitoring** - Real-time security monitoring for threats and anomalies
 - ✨ **Malware detection** - Identifies cryptominers, ransomware, keyloggers, backdoors
 - ✨ **Resource abuse detection** - Monitors CPU/memory usage patterns
@@ -945,7 +1042,7 @@ Built with:
 ---
 
 **Download**: Available via Homebrew or GitHub Releases  
-**Version**: 1.5.0  
+**Version**: 1.5.1  
 **Release Date**: December 2024  
 **License**: MIT
 
