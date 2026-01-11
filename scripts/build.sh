@@ -31,6 +31,18 @@ echo "🧹 Cleaning previous builds..."
 rm -rf build dist *.spec
 rm -f bin/jarvis
 
+# Get the script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+JARVIS_SCRIPT="$PROJECT_ROOT/jarvis.py"
+
+# Verify jarvis.py exists
+if [ ! -f "$JARVIS_SCRIPT" ]; then
+    echo "❌ Error: jarvis.py not found at $JARVIS_SCRIPT"
+    echo "💡 Make sure jarvis.py is in the project root directory"
+    exit 1
+fi
+
 # Build with PyInstaller
 echo "🔨 Building binary with PyInstaller..."
 python3 -m PyInstaller \
@@ -39,7 +51,7 @@ python3 -m PyInstaller \
     --console \
     --clean \
     --noconfirm \
-    jarvis.py
+    "$JARVIS_SCRIPT"
 
 # Copy binary to bin directory
 echo "📦 Copying binary to bin/jarvis..."

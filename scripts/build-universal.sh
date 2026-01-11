@@ -21,6 +21,18 @@ echo "🖥️  Current architecture: $CURRENT_ARCH"
 mkdir -p bin
 mkdir -p dist-arch
 
+# Get the script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+JARVIS_SCRIPT="$PROJECT_ROOT/jarvis.py"
+
+# Verify jarvis.py exists
+if [ ! -f "$JARVIS_SCRIPT" ]; then
+    echo "❌ Error: jarvis.py not found at $JARVIS_SCRIPT"
+    echo "💡 Make sure jarvis.py is in the project root directory"
+    exit 1
+fi
+
 # Function to build for a specific architecture
 build_for_arch() {
     local arch=$1
@@ -37,7 +49,7 @@ build_for_arch() {
         --console \
         --clean \
         --noconfirm \
-        jarvis.py 2>&1 | grep -E "(INFO|ERROR|WARNING|Building)" || true
+        "$JARVIS_SCRIPT" 2>&1 | grep -E "(INFO|ERROR|WARNING|Building)" || true
     
     # Copy to architecture-specific directory
     if [ -f "dist/jarvis" ]; then

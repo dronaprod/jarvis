@@ -1,0 +1,29 @@
+---
+alwaysApply: true
+---
+Project Structure rules : 
+1. The main package directory is `jarvis/` and contains all core logic.
+2. Core logic is organized by functionality under subdirectories:
+    - `core/`: Main application orchestration, AI integrations, monitoring, security.
+    - `utils/`: Configuration, notification, and system information utilities.
+    - `cli/`: Command-line interface logic and argument parsing.
+3. The core modules are further split by responsibility:
+    - `core/ai/` for individual AI model integrations.
+    - `core/monitoring/` for network and process monitoring.
+    - `core/security/` for security features such as scanning.
+4. Utility modules (`utils/`) house shareable configuration, notification, and system info logic.
+5. CLI modules (`cli/`) manage CLI entry, command dispatch, and argument parsing.
+6. The `tests/` directory must mirror the main package structure for test modules.
+7. All documentation except README and release notes must go in the `docs/` folder.
+8. Build and install scripts are placed under `jarvis/scripts/` only.
+9. Keep the legacy monolithic `jarvis/backup/scripts/jarvis.py` for backward compatibility, but new code must follow the modular structure.
+10. File and module names should be short, lowercase, and use underscores for separation.
+11. All new features must be placed in the relevant subpackage and not in the root of `jarvis/`.
+12. No business logic or core functionality should be placed in `__init__.py` files; these are for imports and exports only.
+
+Document Addition Rules: 
+1. Add all the documents other than readme and release  notes to docs folder only
+
+Scripts rules : 
+1. Add all the scripts in the scripts folder only
+

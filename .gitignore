@@ -1,27 +1,31 @@
-# Build directories
-bin/
-dist/
-build/
-dist-arch/
-
-# PyInstaller
-*.spec
-
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-*.egg-info/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
 .eggs/
-
-homebrew-jarvis/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
 # Virtual environments
 venv/
 env/
 ENV/
+.venv
 
 # IDE
 .vscode/
@@ -29,9 +33,36 @@ ENV/
 *.swp
 *.swo
 *~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Jupyter
+.ipynb_checkpoints
+
+# PyInstaller
+*.spec
+build/
+dist/
+
+# Configuration (may contain secrets)
+*.config.json
+config.json
+
+# Logs
+*.log
+logs/
 
 # OS
 .DS_Store
 Thumbs.db
 
-test/
+# Project specific
+test_data/
+*.pyc
+.pytest_cache/

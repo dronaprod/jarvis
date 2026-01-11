@@ -5,16 +5,23 @@ echo "🚀 Installing Jarvis - Global Terminal AI Copilot (User Mode)..."
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-JARVIS_SCRIPT="$SCRIPT_DIR/jarvis.py"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+JARVIS_SCRIPT="$PROJECT_ROOT/jarvis.py"
+
+# Verify jarvis.py exists
+if [ ! -f "$JARVIS_SCRIPT" ]; then
+    echo "❌ Error: jarvis.py not found at $JARVIS_SCRIPT"
+    echo "💡 Make sure jarvis.py is in the project root directory"
+    exit 1
+fi
 
 # Create jarvis_files directory in user's local bin
 JARVIS_FILES_DIR="$HOME/.local/bin/jarvis_files"
 mkdir -p "$JARVIS_FILES_DIR"
 
-# Copy jarvis.py and seclore_lite_open.sh to the new location (avoids Desktop permission issues)
+# Copy jarvis.py to the new location (avoids Desktop permission issues)
 echo "📁 Copying files to secure location..."
-cp "$SCRIPT_DIR/jarvis.py" "$JARVIS_FILES_DIR/jarvis.py"
-cp "$SCRIPT_DIR/seclore_lite_open.sh" "$JARVIS_FILES_DIR/seclore_lite_open.sh" 2>/dev/null || true
+cp "$JARVIS_SCRIPT" "$JARVIS_FILES_DIR/jarvis.py"
 
 # Remove extended attributes and make executable
 xattr -c "$JARVIS_FILES_DIR/jarvis.py" 2>/dev/null || true
