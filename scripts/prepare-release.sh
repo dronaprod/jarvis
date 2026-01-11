@@ -3,8 +3,12 @@
 
 set -e
 
+# Get the script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 VERSION="${1:-1.0.0}"
-RELEASE_DIR="releases/v${VERSION}"
+RELEASE_DIR="$PROJECT_ROOT/releases/v${VERSION}"
 
 echo "📦 Preparing release archives for Jarvis v${VERSION}..."
 
@@ -12,7 +16,7 @@ echo "📦 Preparing release archives for Jarvis v${VERSION}..."
 mkdir -p "$RELEASE_DIR"
 
 # Check if binaries exist
-if [ ! -f "bin/jarvis" ]; then
+if [ ! -f "$PROJECT_ROOT/bin/jarvis" ]; then
     echo "❌ Error: bin/jarvis not found. Run ./build.sh first."
     exit 1
 fi
@@ -32,7 +36,7 @@ echo "🏗️  Current architecture: $ARCH_NAME"
 
 # Create temporary directory for archive
 TEMP_DIR=$(mktemp -d)
-cp bin/jarvis "$TEMP_DIR/"
+cp "$PROJECT_ROOT/bin/jarvis" "$TEMP_DIR/"
 
 # Create tar.gz archive
 ARCHIVE_NAME="jarvis-darwin-${ARCH_NAME}.tar.gz"

@@ -6,12 +6,12 @@ echo "🚀 Installing Jarvis - Global Terminal AI Copilot (User Mode)..."
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-JARVIS_SCRIPT="$PROJECT_ROOT/jarvis.py"
+CLI_MAIN="$PROJECT_ROOT/cli/main.py"
 
-# Verify jarvis.py exists
-if [ ! -f "$JARVIS_SCRIPT" ]; then
-    echo "❌ Error: jarvis.py not found at $JARVIS_SCRIPT"
-    echo "💡 Make sure jarvis.py is in the project root directory"
+# Verify cli/main.py exists
+if [ ! -f "$CLI_MAIN" ]; then
+    echo "❌ Error: cli/main.py not found at $CLI_MAIN"
+    echo "💡 Make sure cli/main.py exists in the project directory"
     exit 1
 fi
 
@@ -19,17 +19,16 @@ fi
 JARVIS_FILES_DIR="$HOME/.local/bin/jarvis_files"
 mkdir -p "$JARVIS_FILES_DIR"
 
-# Copy jarvis.py to the new location (avoids Desktop permission issues)
-echo "📁 Copying files to secure location..."
-cp "$JARVIS_SCRIPT" "$JARVIS_FILES_DIR/jarvis.py"
+# Copy the entire project structure to the new location (avoids Desktop permission issues)
+echo "📁 Copying project files to secure location..."
+cp -r "$PROJECT_ROOT/core" "$JARVIS_FILES_DIR/" 2>/dev/null || true
+cp -r "$PROJECT_ROOT/utils" "$JARVIS_FILES_DIR/" 2>/dev/null || true
+cp -r "$PROJECT_ROOT/cli" "$JARVIS_FILES_DIR/" 2>/dev/null || true
+cp "$PROJECT_ROOT/requirements.txt" "$JARVIS_FILES_DIR/" 2>/dev/null || true
 
 # Remove extended attributes and make executable
-xattr -c "$JARVIS_FILES_DIR/jarvis.py" 2>/dev/null || true
-chmod +x "$JARVIS_FILES_DIR/jarvis.py"
-chmod +x "$JARVIS_FILES_DIR/seclore_lite_open.sh" 2>/dev/null || true
-
-# Update the script path to use the new location
-JARVIS_SCRIPT="$JARVIS_FILES_DIR/jarvis.py"
+find "$JARVIS_FILES_DIR" -type f -name "*.py" -exec xattr -c {} \; 2>/dev/null || true
+find "$JARVIS_FILES_DIR" -type f -name "*.py" -exec chmod +x {} \; 2>/dev/null || true
 
 # Check if Python 3 is available
 if ! command -v python3 &> /dev/null; then
@@ -39,7 +38,12 @@ fi
 
 # Install required Python packages
 echo "📦 Installing required Python packages..."
-pip3 install --break-system-packages google-generativeai==0.3.2 psutil==5.9.6 requests==2.31.0
+if [ -f "$PROJECT_ROOT/requirements.txt" ]; then
+    pip3 install --break-system-packages -r "$PROJECT_ROOT/requirements.txt"
+else
+    # Fallback to individual packages if requirements.txt doesn't exist
+    pip3 install --break-system-packages google-generativeai==0.3.2 psutil==5.9.6 requests==2.31.0
+fi
 
 # Create the jarvis command in user's home directory
 echo "🔧 Setting up jarvis command in your home directory..."
@@ -51,8 +55,14 @@ mkdir -p ~/.local/bin
 cat > ~/.local/bin/jarvis << EOF
 #!/bin/bash
 # Use jarvis from the user's local bin directory (avoids Desktop permission issues)
-JARVIS_SCRIPT="\$HOME/.local/bin/jarvis_files/jarvis.py"
-python3 "\$JARVIS_SCRIPT" "\$@"
+JARVIS_DIR="\$HOME/.local/bin/jarvis_files"
+CLI_MAIN="\$JARVIS_DIR/cli/main.py"
+
+# Add jarvis_files to Python path
+export PYTHONPATH="\$JARVIS_DIR:\$PYTHONPATH"
+
+# Run the modular CLI
+python3 "\$CLI_MAIN" "\$@"
 EOF
 
 # Make it executable

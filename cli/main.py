@@ -64,13 +64,40 @@ def _main_legacy():
 
 def _main_modular():
     """New modular main function - uses the new package structure"""
-    parser = create_parser()
-    args = parser.parse_args()
+    # Check if first argument is 'configure' - if so, use full parser with subcommands
+    # Otherwise, parse as query (without requiring subcommand)
+    if len(sys.argv) > 1 and sys.argv[1] == 'configure':
+        parser = create_parser()
+        args = parser.parse_args()
+        
+        # Route to configure handler
+        if args.command == 'configure':
+            handle_configure(args)
+            return
+    else:
+        # For queries and other commands, use a simpler parser without subparsers
+        import argparse
+        from utils.config import load_config
+        
+        config = load_config()
+        default_model = config.get('default_model', 'gemini')
+        
+        parser = argparse.ArgumentParser(description='Jarvis - Global Terminal AI Copilot')
+        parser.add_argument('query', nargs='*', help='Query to ask Jarvis')
+        parser.add_argument('-m', '--model', choices=['slm', 'gemini', 'drona'], 
+                           default=default_model, help=f'AI model to use (default: {default_model})')
+        parser.add_argument('-b', '--bot-id', dest='bot_id', help='Bot ID for Drona model')
+        parser.add_argument('-img', '--image', dest='image_path', help='Path to image file')
+        parser.add_argument('-v', '--voice', action='store_true', help='Enable voice mode')
+        parser.add_argument('-scan', '--scan', action='store_true', help='Scan folder for sensitive files')
+        parser.add_argument('-f', '--folder', dest='folder_path', help='Folder path to scan (required with -scan)')
+        parser.add_argument('-monitor', '--monitor', dest='monitor_type', 
+                           help='Monitor system activity (network, process)')
+        
+        args = parser.parse_args()
     
-    # Route to appropriate handler based on command
-    if args.command == 'configure':
-        handle_configure(args)
-    elif hasattr(args, 'monitor_type') and args.monitor_type:
+    # Route to appropriate handler
+    if hasattr(args, 'monitor_type') and args.monitor_type:
         handle_monitor(args)
     elif hasattr(args, 'scan') and args.scan:
         handle_scan(args)

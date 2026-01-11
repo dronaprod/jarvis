@@ -16,8 +16,13 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
     exit 1
 fi
 
+# Get the script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+CLI_MAIN="$PROJECT_ROOT/cli/main.py"
+
 # Create bin directory if it doesn't exist
-mkdir -p bin
+mkdir -p "$PROJECT_ROOT/bin"
 
 # Install/upgrade PyInstaller if needed
 echo "📥 Checking PyInstaller..."
@@ -28,61 +33,76 @@ fi
 
 # Clean previous builds
 echo "🧹 Cleaning previous builds..."
-rm -rf build dist *.spec
-rm -f bin/jarvis
+rm -rf "$PROJECT_ROOT/build" "$PROJECT_ROOT/dist" "$PROJECT_ROOT"/*.spec
+rm -f "$PROJECT_ROOT/bin/jarvis"
 
-# Get the script directory and project root
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-JARVIS_SCRIPT="$PROJECT_ROOT/jarvis.py"
-
-# Verify jarvis.py exists
-if [ ! -f "$JARVIS_SCRIPT" ]; then
-    echo "❌ Error: jarvis.py not found at $JARVIS_SCRIPT"
-    echo "💡 Make sure jarvis.py is in the project root directory"
+# Verify cli/main.py exists
+if [ ! -f "$CLI_MAIN" ]; then
+    echo "❌ Error: cli/main.py not found at $CLI_MAIN"
+    echo "💡 Make sure cli/main.py exists in the project directory"
     exit 1
 fi
 
 # Build with PyInstaller
 echo "🔨 Building binary with PyInstaller..."
+# Change to project root so PyInstaller can properly detect all modules
+cd "$PROJECT_ROOT"
 python3 -m PyInstaller \
     --name jarvis \
     --onefile \
     --console \
     --clean \
     --noconfirm \
-    "$JARVIS_SCRIPT"
+    --hidden-import cli.main \
+    --hidden-import cli.parser \
+    --hidden-import cli.commands \
+    --hidden-import core.jarvis \
+    --hidden-import core.ai.base \
+    --hidden-import core.ai.gemini \
+    --hidden-import core.ai.slm \
+    --hidden-import core.ai.drona \
+    --hidden-import core.monitoring.network \
+    --hidden-import core.monitoring.process \
+    --hidden-import core.security.scanner \
+    --hidden-import core.voice.voice_mode \
+    --hidden-import utils.config \
+    --hidden-import utils.notifications \
+    --hidden-import utils.system_info \
+    --paths . \
+    "cli/main.py"
 
 # Copy binary to bin directory
 echo "📦 Copying binary to bin/jarvis..."
-cp dist/jarvis bin/jarvis
+cp "$PROJECT_ROOT/dist/jarvis" "$PROJECT_ROOT/bin/jarvis"
 
 # Make it executable
-chmod +x bin/jarvis
-
-# Clean up build artifacts (keep dist for verification)
-echo "🧹 Cleaning up build artifacts..."
-rm -rf build *.spec
+chmod +x "$PROJECT_ROOT/bin/jarvis"
 
 # Verify the binary
-if [ -f "bin/jarvis" ]; then
+if [ -f "$PROJECT_ROOT/bin/jarvis" ]; then
     echo "✅ Build successful!"
-    echo "📦 Binary location: bin/jarvis"
-    echo "📏 Binary size: $(du -h bin/jarvis | cut -f1)"
+    echo "📦 Binary location: $PROJECT_ROOT/bin/jarvis"
+    echo "📏 Binary size: $(du -h "$PROJECT_ROOT/bin/jarvis" | cut -f1)"
     echo "🏗️  Architecture: $ARCH"
     echo ""
     echo "🧪 Testing binary..."
-    ./bin/jarvis --help > /dev/null 2>&1 && echo "✅ Binary works correctly!" || echo "⚠️  Binary may have issues"
+    "$PROJECT_ROOT/bin/jarvis" --help > /dev/null 2>&1 && echo "✅ Binary works correctly!" || echo "⚠️  Binary may have issues"
+    
+    # Clean up all build artifacts after successful build
+    echo ""
+    echo "🧹 Cleaning up build artifacts..."
+    rm -rf "$PROJECT_ROOT/build" "$PROJECT_ROOT/dist" "$PROJECT_ROOT/dist-arch" "$PROJECT_ROOT"/*.spec
+    echo "✅ Cleaned up build, dist, and dist-arch directories"
 else
     echo "❌ Build failed - binary not found"
     exit 1
 fi
 
 echo ""
-echo "🎉 Done! Binary is ready at: bin/jarvis"
+echo "🎉 Done! Binary is ready at: $PROJECT_ROOT/bin/jarvis"
 echo ""
 echo "💡 To build for both architectures:"
 echo "   1. Run this script on an x86_64 Mac: ./build.sh"
 echo "   2. Run this script on an arm64 Mac: ./build.sh"
-echo "   3. Or use lipo to create a universal binary (requires both builds)"
+echo "   3. Or use ./build-universal.sh to create a universal binary"
 

@@ -1,0 +1,17 @@
+Welcome to the Desktop Copilot Project!
+
+Desktop Copilot is a cross-platform AI assistant designed to enhance your productivity and security on macOS, Linux, and Windows. The project provides a powerful set of features, including command-line interaction, AI-powered assistance, file and process monitoring, security analysis, and more.
+
+Key Features:
+- AI-powered command and query interface
+- Process and network monitoring
+- Security scanning and analysis
+- Voice command support
+- Easy extensibility and customization
+
+Whether you're a developer, IT professional, or just looking for an intelligent assistant, Desktop Copilot aims to simplify tasks, automate workflows, and help you work more efficiently and securely.
+
+For detailed setup and usage instructions, please refer to the project's documentation.
+Happy coding!
+
+ is my password 

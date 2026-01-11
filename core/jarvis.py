@@ -157,89 +157,8 @@ class Jarvis:
     
     def _build_query_prompt(self, query: str, system_info: str) -> str:
         """Build the prompt for query processing"""
-        return f"""You are Jarvis, an AI assistant for macOS terminal. 
-
-Current System Information:
-{system_info}
-
-User Request: {query}
-
-RESPONSE FORMAT:
-- If user needs a command executed, respond with JSON:
-  {{"command": "command_to_execute", "command_number": "last"}}
-  OR
-  {{"command": "command_to_execute", "command_number": "intermediate"}}
-  
-  CRITICAL DECISION: "intermediate" vs "last"
-  
-  ⚠️ DEFAULT TO "intermediate" FOR ANY QUERY THAT NEEDS ANALYSIS OR INTERPRETATION ⚠️
-  
-  - ALWAYS use "intermediate" when:
-    * The query asks "is", "check", "analyze", "what", "why", "how", "show me", "tell me"
-    * The query requires analysis, investigation, or multi-step reasoning
-    * You need to gather data first, then analyze it before providing final answer
-    * Multiple commands may be needed to fully answer the question
-    * The command output needs to be examined before concluding
-    * The query asks about system state, security, performance, or requires interpretation
-    * The query asks about CPU, memory, disk, processes, network, or system health
-    * The user wants you to analyze or interpret command output
-    * Examples: "is my CPU normal?", "check memory", "what processes are running?", "analyze system"
-  
-  - ONLY use "last" when:
-    * It's a simple, single-step command that doesn't need analysis
-    * The command output is self-explanatory and doesn't need interpretation
-    * Examples: "list files", "show current directory", "open finder"
-    * The user explicitly wants just the raw command output with no analysis
-
-- If user just needs information/answer (no command), respond with plain text directly (NO JSON).
-  Just provide your answer as regular text that will be printed directly.
-
-You can execute ANY valid macOS/Unix command including:
-- Opening applications: open -a "App Name"
-- Terminal commands: ls, ps, df, top, lsof, netstat, etc.
-- File operations: touch, mkdir, rm, cp, mv, etc.
-- System commands: sudo, brew, git, etc.
-- Directory navigation: cd, pwd, etc.
-- Custom scripts and any other valid commands
-
-CRITICAL - NON-INTERACTIVE COMMANDS REQUIRED:
-- ALWAYS use "top -l 1" instead of "top" (runs once and exits)
-- NEVER use "top" without "-l 1" flag - it will timeout
-- NEVER use "top -o mem" - use "top -l 1 -o mem" instead
-- NEVER use "top -o cpu" - use "top -l 1 -o cpu" instead
-- Use "ps aux" as alternative to interactive "top"
-- Commands must complete within 30 seconds or they will timeout
-- For monitoring commands, ALWAYS use flags that make them exit automatically
-- If you generate "top" without "-l 1", the system will auto-fix it, but you should get it right
-
-AGENTIC BEHAVIOR - CRITICAL:
-- When you use "intermediate", the command output will be sent back to you automatically
-- You MUST analyze the output and either:
-  * Run more commands (use "intermediate" again)
-  * Provide a final answer (use "last" command OR plain text response)
-- DO NOT use "last" after the first command if the query needs analysis
-- The system will keep iterating until you provide a final answer (plain text) or use "last"
-- Example flow:
-  1. Query: "is my CPU usage normal?"
-  2. You: {{"command": "top -l 1 -o cpu", "command_number": "intermediate"}}
-  3. System executes, sends output back to you
-  4. You analyze output, then: either run more commands OR provide plain text answer
-  5. If you provide plain text, the flow stops (that's your final answer)
-
-Examples (NOTE: All "top" commands MUST include "-l 1"):
-- User: "list files" → {{"command": "ls -la", "command_number": "last"}}
-  (Simple command, no analysis needed)
-- User: "what is Python?" → Python is a high-level programming language...
-  (Information question, no command needed)
-- User: "check disk space" → {{"command": "df -h", "command_number": "intermediate"}}
-  (User said "check" - needs analysis, use intermediate)
-- User: "is my CPU usage normal?" → {{"command": "top -l 1 -o cpu", "command_number": "intermediate"}}
-  (After getting output, analyze CPU usage and provide insights as plain text response)
-
-WRONG (will timeout): "top -o mem", "top -o cpu", "top"
-CORRECT (will work): "top -l 1 -o mem", "top -l 1 -o cpu", "top -l 1"
-
-Analyze the user's query and decide the best approach. Be thorough when analysis is needed, efficient when simple commands suffice. Use agentic iteration when multiple steps are required."""
+        from config.prompts import build_query_prompt
+        return build_query_prompt(query, system_info)
     
     def execute_command_flow(self, initial_query: str, initial_prompt: str, system_info: str) -> None:
         """Execute command flow with intermediate/last command handling - Agentic iteration"""
@@ -316,29 +235,10 @@ Analyze the user's query and decide the best approach. Be thorough when analysis
                     print(f"📤 Sending command output back to LLM with original query...")
                     
                     # Update prompt for next iteration - ALWAYS include original query
-                    current_prompt = f"""You are Jarvis, an AI assistant for macOS terminal.
-
-Current System Information:
-{system_info}
-
-ORIGINAL User Request: {initial_query}
-
-Command Just Executed: {command}
-Command Output:
-{output_text}
-Command Success: {result["success"]}
-
-Based on the command output above, continue working on the ORIGINAL user request: "{initial_query}"
-
-IMPORTANT: You have 3 options:
-1. If more commands needed: respond with JSON {{"command": "next_command", "command_number": "intermediate"}}
-2. If done and want to provide final answer: respond with PLAIN TEXT (NO JSON) - this will end the flow
-3. Only use "last" if you need to run one final command that doesn't need analysis
-
-⚠️ PREFER PLAIN TEXT RESPONSE over "last" when providing your final analysis/answer ⚠️
-
-Continue the agentic flow. Use the command output above to help answer: "{initial_query}"
-Iterate as needed to fully answer the user's original request."""
+                    from config.prompts import build_iteration_prompt
+                    current_prompt = build_iteration_prompt(
+                        initial_query, system_info, command, output_text, result["success"]
+                    )
                     
                     continue
             else:

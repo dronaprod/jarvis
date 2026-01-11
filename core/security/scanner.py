@@ -75,40 +75,8 @@ class SecurityScanner:
             return None
         
         # Build prompt for categorization
-        prompt = f"""You are a security expert analyzing file content to determine if it contains sensitive information.
-
-File Metadata:
-- Path: {file_metadata.get('path', 'unknown')}
-- Size: {file_metadata.get('size', 0)} bytes
-- Extension: {file_metadata.get('extension', 'unknown')}
-- Type: {file_metadata.get('type', 'unknown')}
-
-File Content (Markdown):
-{file_content_markdown}
-
-TASK: Analyze this file and determine if it contains sensitive information that should be protected.
-
-Sensitive information includes but is not limited to:
-- API keys, tokens, passwords, credentials
-- Personal identifiable information (PII): SSN, credit cards, phone numbers, addresses
-- Financial information: bank accounts, payment details
-- Medical records and health information
-- Confidential business data: trade secrets, proprietary code, client data
-- Authentication credentials: usernames, passwords, private keys
-- Database connection strings with credentials
-- Environment variables with secrets
-- Configuration files with sensitive data
-- Source code with hardcoded secrets
-
-RESPONSE FORMAT (JSON only):
-{{
-    "is_sensitive": true or false,
-    "reason": "Brief explanation of why this file is or is not sensitive",
-    "sensitivity_level": "high" or "medium" or "low" or "none",
-    "recommended_protection": "Specific protection recommendations (e.g., 'encrypt', 'restrict access', 'move to secure location', 'remove from repository')"
-}}
-
-Respond ONLY with valid JSON, no additional text."""
+        from config.prompts import build_file_sensitivity_prompt
+        prompt = build_file_sensitivity_prompt(file_metadata, file_content_markdown)
 
         try:
             response_text = self.ai_provider.query(prompt)

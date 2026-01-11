@@ -145,40 +145,10 @@ class ProcessMonitor:
             reasons = indicators.get('reasons', [])
             reasons_str = ', '.join(reasons) if reasons else 'None'
             
-            prompt = f"""You are a cybersecurity expert analyzing a potentially suspicious process.
-
-PROCESS INFORMATION:
-- Process Name: {name}
-- PID: {pid}
-- Executable Path: {exe}
-- User: {username}
-- Command Line: {cmdline_str}
-- CPU Usage: {cpu_percent:.1f}%
-- Memory Usage: {mem_percent:.1f}%
-
-THREAT INDICATORS DETECTED:
-{reasons_str}
-
-TASK: Analyze this process and assess if it's malicious, suspicious, or benign.
-
-Consider:
-1. Is this a known legitimate process or potentially malicious?
-2. Are the resource usage patterns normal?
-3. Is the executable path typical for this process?
-4. Are there red flags in the command line?
-5. Could this be malware, ransomware, cryptominer, or other threat?
-6. Could this be attempting file deletion, corruption, or system compromise?
-
-RESPONSE FORMAT (JSON only):
-{{
-    "level": "LOW" or "MEDIUM" or "HIGH" or "CRITICAL",
-    "analysis": "Brief analysis explaining the threat assessment",
-    "recommendations": "Specific recommendations (Allow, Monitor, Investigate, Terminate, Block)",
-    "is_malicious": true or false,
-    "threat_type": "none/malware/ransomware/cryptominer/backdoor/keylogger/other"
-}}
-
-Respond ONLY with valid JSON, no additional text."""
+            from config.prompts import build_process_threat_prompt
+            prompt = build_process_threat_prompt(
+                name, pid, exe, username, cmdline_str, cpu_percent, mem_percent, reasons_str
+            )
 
             # Get AI response
             response_text = self.ai_provider.query(prompt)

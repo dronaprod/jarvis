@@ -23,7 +23,7 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     
-    # Subcommands
+    # Subcommands (optional - only used when 'configure' is specified)
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
     # Configure command
@@ -61,7 +61,7 @@ def create_parser() -> argparse.ArgumentParser:
         help='Set this model as the default model'
     )
     
-    # Query command (default)
+    # Query command (default - positional arguments)
     parser.add_argument(
         'query',
         nargs='*',

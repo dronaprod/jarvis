@@ -84,36 +84,10 @@ class NetworkMonitor:
             import json
             import re
             
-            prompt = f"""You are a cybersecurity expert analyzing network connections for potential threats.
-            
-CONNECTION DETAILS:
-- Process Name: {process_name}
-- Process Path: {process_exe}
-- Process PID: {connection['pid']}
-- Command Line: {process_cmdline}
-- Local Address: {connection['local_ip']}:{connection['local_port']}
-- Remote Address: {connection['remote_ip']}:{connection['remote_port']}
-- Remote IP Type: {remote_info.get('type', 'Unknown') if remote_info else 'Unknown'}
-- Remote Hostname: {remote_info.get('hostname', 'N/A') if remote_info else 'N/A'}
-
-TASK: Analyze this outbound network connection and assess if it's suspicious or potentially malicious.
-
-Consider:
-1. Is this a known legitimate application?
-2. Is the remote IP/hostname suspicious?
-3. Is the port number commonly used for malicious activity?
-4. Is the process path typical for this application?
-5. Are there any red flags in the command line arguments?
-
-RESPONSE FORMAT (JSON only):
-{{
-    "level": "LOW" or "MEDIUM" or "HIGH" or "CRITICAL",
-    "analysis": "Brief analysis explaining the threat level assessment",
-    "recommendations": "Specific recommendations for the user (e.g., 'Allow - this is normal Chrome activity', 'Investigate - unusual port for this application', 'Block immediately - known malicious pattern')",
-    "is_suspicious": true or false
-}}
-
-Respond ONLY with valid JSON, no additional text."""
+            from config.prompts import build_network_threat_prompt
+            prompt = build_network_threat_prompt(
+                connection, process_name, process_exe, process_cmdline, remote_info
+            )
 
             # Get AI response
             response_text = self.ai_provider.query(prompt)
